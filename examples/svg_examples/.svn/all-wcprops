@@ -1,0 +1,251 @@
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/19/trunk/examples/svg_examples
+END
+marker.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/marker.svg
+END
+anim01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/18/trunk/examples/svg_examples/anim01.svg
+END
+tspan01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/tspan01.svg
+END
+tspan02.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/tspan02.svg
+END
+polygon01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/3/trunk/examples/svg_examples/polygon01.svg
+END
+line01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/line01.svg
+END
+tspan03.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/tspan03.svg
+END
+inheritance.svg
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/3/trunk/examples/svg_examples/inheritance.svg
+END
+arcs01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/arcs01.svg
+END
+arcs02.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/arcs02.svg
+END
+quad01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/quad01.svg
+END
+polyline01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/3/trunk/examples/svg_examples/polyline01.svg
+END
+ellipse01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/3/trunk/examples/svg_examples/ellipse01.svg
+END
+fillrule-evenodd.svg
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/3/trunk/examples/svg_examples/fillrule-evenodd.svg
+END
+Units.svg
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/3/trunk/examples/svg_examples/Units.svg
+END
+InitialCoords.svg
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/3/trunk/examples/svg_examples/InitialCoords.svg
+END
+fillrule-nonzero.svg
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/3/trunk/examples/svg_examples/fillrule-nonzero.svg
+END
+triangle01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/3/trunk/examples/svg_examples/triangle01.svg
+END
+RotateScale.svg
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/3/trunk/examples/svg_examples/RotateScale.svg
+END
+Skew.svg
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/3/trunk/examples/svg_examples/Skew.svg
+END
+NewCoordSys.svg
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/3/trunk/examples/svg_examples/NewCoordSys.svg
+END
+Nested.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/Nested.svg
+END
+ViewBox.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/ViewBox.svg
+END
+struct-image-01-t.svg
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/3/trunk/examples/svg_examples/struct-image-01-t.svg
+END
+text01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/text01.svg
+END
+cubic01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/cubic01.svg
+END
+OrigCoordSys.svg
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/3/trunk/examples/svg_examples/OrigCoordSys.svg
+END
+struct-image-04-t.svg
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/3/trunk/examples/svg_examples/struct-image-04-t.svg
+END
+cubic02.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/cubic02.svg
+END
+PreserveAspectRatio.svg
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/3/trunk/examples/svg_examples/PreserveAspectRatio.svg
+END
+rect01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/rect01.svg
+END
+rect02.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/rect02.svg
+END
+tref01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/tref01.svg
+END
+circle01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/3/trunk/examples/svg_examples/circle01.svg
+END
+toap01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/toap01.svg
+END
+toap02.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/toap02.svg
+END
+toap03.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/toap03.svg
+END
+toap04.svg
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/examples/svg_examples/toap04.svg
+END
+linejoin.svg
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/3/trunk/examples/svg_examples/linejoin.svg
+END
+linecap.svg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/3/trunk/examples/svg_examples/linecap.svg
+END
+animMotion01.svg
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/19/trunk/examples/svg_examples/animMotion01.svg
+END

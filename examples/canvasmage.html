@@ -1,0 +1,56 @@
+<html>
+<head>
+<title>CanvasMage</title>
+</head>
+<body>
+  <h1>CanvasMage</h1>
+  <p>
+    CanvasMage, a lossless vector image format using canvas and AJAX. 
+  </p>
+  <h2>How does it work?</h2>
+  <p>
+    You draw on a canvas and save your drawing commands to a file, then play them back from the file. And presto! An image!
+  </p>
+  <h2>How do I use it?</h2>
+  <ol>
+    <li>Use <a href="canvas.html#RecordingTest">CAKE</a>'s RecordingContext to draw your image. 
+        (var ctx = new RecordingContext(), then instead of ctx.fillStyle = foo; 
+        etc., use ctx.setFillStyle(foo); Or write your own setters.)</li>
+    <li>Save the results of ctx.serialize(width, height) to, for example, "image.json".</li>
+    <li>Insert &lt;img canvas-src="image.json"&gt; in your HTML 
+        document where you want the image, and put &lt;script 
+        src="canvasmage.js"&gt;&lt;/script&gt; at the end of the document's 
+        body.</li>
+    <li>(Make your web server use GZIP compression for outgoing json files to save bandwidth.)</li>
+  </ol>
+  <h2>TODO</h2>
+    <p>Capturing images and image patterns, currently you can only use vectors and gradients.</p>
+  <h2>Download</h2>
+  <p>
+    <a href="canvasmage.js">canvasmage.js</a>
+  </p>
+  <h2>Example CanvasMage images (works only in browsers with canvas)</h2>
+  <h3>Original size</h3>
+  <p>
+    &lt;img canvas-src="image.json"&gt;
+  </p>
+  <p>
+    <img canvas-src="image.json">
+  </p>
+  <h3>Half size</h3>
+  <p>
+    &lt;img canvas-src="image.json" width="320" height="240"&gt;
+  </p>
+  <p>
+    <img canvas-src="image.json" width="320" height="240">
+  </p>
+  <h3>Stretched horizontally</h3>
+  <p>
+    &lt;img canvas-src="image.json" width="1200"&gt;
+  </p>
+  <p>
+    <img canvas-src="image.json" width="1200">
+  </p>
+  <p>Btw, image.json is 3kB uncompressed, 664 bytes gzipped.</p>
+</body>
+</html>
