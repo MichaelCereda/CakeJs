@@ -5,5 +5,5 @@ The original repository is located at http://code.google.com/p/cakejs/
   
 ** ATTENTION **  
 This project is work in progress.  
-The splitted files are broken and the need a namespace.  
+The splitted files are broken and the library needs a namespace.  
 If you want to use the plain old cakejs use the file located in the dist folder.  
