@@ -307,24 +307,24 @@ if (!Function.prototype.bind) {
     }
   }
 }/**
-  Klass is a function that returns a constructor function.
+  CakeJS.Klass is a function that returns a constructor function.
 
   The constructor function calls #initialize with its arguments.
 
-  The parameters to Klass have their prototypes or themselves merged with the
+  The parameters to CakeJS.Klass have their prototypes or themselves merged with the
   constructor function's prototype.
 
   Finally, the constructor function's prototype is merged with the constructor
   function. So you can write Shape.getArea.call(this) instead of
   Shape.prototype.getArea.call(this).
 
-  Shape = Klass({
+  Shape = CakeJS.Klass({
     getArea : function() {
       raise('No area defined!')
     }
   })
 
-  Rectangle = Klass(Shape, {
+  Rectangle = CakeJS.Klass(Shape, {
     initialize : function(x, y) {
       this.x = x
       this.y = y
@@ -335,7 +335,7 @@ if (!Function.prototype.bind) {
     }
   })
 
-  Square = Klass(Rectangle, {
+  Square = CakeJS.Klass(Rectangle, {
     initialize : function(s) {
       Rectangle.initialize.call(this, s, s)
     }
@@ -355,7 +355,7 @@ CakeJS.Klass = function() {
   for(var i = 0; i<arguments.length; i++) {
     var a = arguments[i];
     if( a == undefined) continue;
-    if (a.prototype != undefined && a.prototype) {
+    if (a.prototype) {
       Object.extend(c.prototype, a.prototype);
     } else {
       Object.extend(c.prototype, a);
@@ -589,7 +589,8 @@ if (!String.prototype.strip) {
   String.prototype.strip = function() {
     return this.replace(/^\s+|\s+$/g, '')
   }
-}CakeJS.Animatable = CakeJS.Klass({
+}
+CakeJS.Animatable = CakeJS.Klass({
   tweenFunctions : {
     linear : function(v) { return v },
 
@@ -1094,7 +1095,7 @@ CakeJS.Canvas = CakeJS.Klass(CakeJS.CanvasNode, {
       if (container)
         container.appendChild(canvasContainer)
     }
-    CanvasNode.initialize.call(this, config)
+    CakeJS.CanvasNode.initialize.call(this, config)
     this.mouseEventStack = []
     this.canvas = canvas
     canvas.canvas = this
@@ -1549,7 +1550,7 @@ CakeJS.Canvas = CakeJS.Klass(CakeJS.CanvasNode, {
 
   getRecordingContext : function() {
     if (!this.recordingContext)
-      this.recordingContext = new RecordingContext()
+      this.recordingContext = new CakeJS.RecordingContext()
     return this.recordingContext
   },
 
@@ -1603,7 +1604,7 @@ CakeJS.Canvas = CakeJS.Klass(CakeJS.CanvasNode, {
   @param target Link target, defaults to _self.
   @param config Optional config hash.
   */
-LinkNode = Klass(CanvasNode, {
+LinkNode = CakeJS.Klass(CakeJS.CanvasNode, {
   href : null,
   target : '_self',
   cursor : 'pointer',
@@ -1612,7 +1613,7 @@ LinkNode = Klass(CanvasNode, {
     this.href = href
     if (target)
       this.target = target
-    CanvasNode.initialize.call(this, config)
+    CakeJS.CanvasNode.initialize.call(this, config)
     this.setupLinkEventListeners()
   },
 
@@ -1632,7 +1633,7 @@ LinkNode = Klass(CanvasNode, {
   AudioNode is a CanvasNode used to play a sound.
 
   */
-AudioNode = Klass(CanvasNode, {
+AudioNode = CakeJS.Klass(CakeJS.CanvasNode, {
   ready : false,
   autoPlay : false,
   playing : false,
@@ -1644,14 +1645,14 @@ AudioNode = Klass(CanvasNode, {
   transformSound : false,
 
   initialize : function(filename, params) {
-    CanvasNode.initialize.call(this, params)
+    CakeJS.CanvasNode.initialize.call(this, params)
     this.filename = filename
     this.when('load', this._autoPlaySound)
     this.loadSound()
   },
 
   loadSound : function() {
-    this.sound = CanvasSupport.getSoundObject()
+    this.sound = CakeJS.CanvasSupport.getSoundObject()
     if (!this.sound) return
     var self = this
     this.sound.onready = function() {
@@ -1702,7 +1703,7 @@ AudioNode = Klass(CanvasNode, {
   },
 
   handleUpdate : function() {
-    CanvasNode.handleUpdate.apply(this, arguments)
+    CakeJS.CanvasNode.handleUpdate.apply(this, arguments)
     if (this.willBeDrawn) {
       this.transform(null, true)
       if (!this.sound) this.loadSound()
@@ -1788,7 +1789,7 @@ AudioNode = Klass(CanvasNode, {
     scene.handleDraw(elem.getContext('2d'))
 
   */
-CakeJS.CanvasNode = Klass(Animatable, Transformable, {
+CakeJS.CanvasNode = CakeJS.Klass(CakeJS.Animatable, CakeJS.Transformable, {
   OBJECTBOUNDINGBOX : 'objectBoundingBox',
 
   // whether to draw the node and its childNodes or not
@@ -1979,7 +1980,7 @@ CakeJS.CanvasNode = Klass(Animatable, Transformable, {
     this.childNodes = []
     this.frameListeners = []
     this.eventListeners = {}
-    Animatable.initialize.call(this)
+    CakeJS.Animatable.initialize.call(this)
     if (config)
       Object.extend(this, config)
   },
@@ -3725,7 +3726,7 @@ CakeJS.Curves = {
 
   It draws the path by calling #drawGeometry
   */
-CakeJS.Drawable = Klass(CanvasNode, {
+CakeJS.Drawable = CakeJS.Klass(CakeJS.CanvasNode, {
   pickable : true,
   //   'inside' // clip before drawing the stroke
   // | 'above'  // draw stroke after the fill
@@ -3735,7 +3736,7 @@ CakeJS.Drawable = Klass(CanvasNode, {
   ABOVE : 'above', BELOW : 'below', INSIDE : 'inside',
 
   initialize : function(config) {
-    CanvasNode.initialize.call(this, config)
+    CakeJS.CanvasNode.initialize.call(this, config)
   },
 
   /**
@@ -4101,7 +4102,7 @@ E.canvas = function(w,h,config) {
   @param content An HTML element or string of HTML to use as the content.
   @param config Optional config has.
   */
-CakeJS.ElementNode = Klass(CanvasNode, {
+CakeJS.ElementNode = CakeJS.Klass(CakeJS.CanvasNode, {
   noScaling : false,
   noAlpha : false,
   inherit : 'inherit',
@@ -4111,7 +4112,7 @@ CakeJS.ElementNode = Klass(CanvasNode, {
   yOffset: 0,
 
   initialize : function(content, config) {
-    CanvasNode.initialize.call(this, config)
+    CakeJS.CanvasNode.initialize.call(this, config)
     this.content = content
     this.element = E('div', content)
     this.element.style.MozTransformOrigin =
@@ -4120,7 +4121,7 @@ CakeJS.ElementNode = Klass(CanvasNode, {
   },
 
   clone : function() {
-    var c = CanvasNode.prototype.clone.call(this)
+    var c = CakeJS.CanvasNode.prototype.clone.call(this)
     if (this.content && this.content.cloneNode)
       c.content = this.content.cloneNode(true)
     c.element = E('div', c.content)
@@ -4131,13 +4132,13 @@ CakeJS.ElementNode = Klass(CanvasNode, {
   },
 
   setRoot : function(root) {
-    CanvasNode.setRoot.call(this, root)
+    CakeJS.CanvasNode.setRoot.call(this, root)
     if (this.element && this.element.parentNode && this.element.parentNode.removeChild)
       this.element.parentNode.removeChild(this.element)
   },
 
   handleUpdate : function(t, dt) {
-    CanvasNode.handleUpdate.call(this, t, dt)
+    CakeJS.CanvasNode.handleUpdate.call(this, t, dt)
     if (!this.willBeDrawn || !this.visible || this.display == 'none' || this.visibility == 'hidden' || !this.drawable) {
       if (this.element.style.display != 'none')
         this.element.style.display = 'none'
@@ -4185,7 +4186,7 @@ CakeJS.ElementNode = Klass(CanvasNode, {
     if (ctx.fontFamily != null)
       this.element.style.fontFamily = ctx.fontFamily
 
-    var wkt = CanvasSupport.isCSSTransformSupported()
+    var wkt = CakeJS.CanvasSupport.isCSSTransformSupported()
     if (wkt && !this.noScaling) {
       this.element.style.MozTransform =
       this.element.style.webkitTransform = 'matrix('+baseTransform.join(",")+')'
@@ -4433,7 +4434,7 @@ if (CakeJS.Browser == 'IE') {
   @param repeat The repeat mode of the pattern. One of 'repeat', 'repeat-y',
                 'repeat-x' and 'no-repeat'. The default is 'repeat'.
   */
-CakeJS.Pattern = Klass({
+CakeJS.Pattern = CakeJS.Klass({
   isPattern : true,
   repeat: 'repeat',
 
@@ -4466,7 +4467,7 @@ CakeJS.Pattern = Klass({
     return pat
   }
 })
-CakeJS.RecordingContext = Klass({
+CakeJS.RecordingContext = CakeJS.Klass({
   objectId : 0,
   commands : [],
   isMockObject : true,
@@ -4490,9 +4491,9 @@ CakeJS.RecordingContext = Klass({
       obj.isPointInPath = null
       obj.transform = null
       obj.setTransform = null
-      RecordingContext.MockContext = obj
+      CakeJS.RecordingContext.MockContext = obj
     }
-    return RecordingContext.MockContext
+    return CakeJS.RecordingContext.MockContext
   },
 
   createRecordingFunction : function(name){
@@ -4525,7 +4526,7 @@ CakeJS.RecordingContext = Klass({
   },
 
   play : function(ctx) {
-    RecordingContext.play(ctx, this.getRecording())
+    CakeJS.RecordingContext.play(ctx, this.getRecording())
   },
 
   createLinearGradient : function() {
@@ -4546,7 +4547,7 @@ CakeJS.RecordingContext = Klass({
     return new this.MockGradient(this, id)
   },
 
-  MockGradient : Klass({
+  MockGradient : CakeJS.Klass({
     isMockObject : true,
 
     initialize : function(recorder, id) {
@@ -4563,7 +4564,7 @@ CakeJS.RecordingContext = Klass({
     }
   })
 })
-RecordingContext.play = function(ctx, commands) {
+CakeJS.RecordingContext.play = function(ctx, commands) {
   var dictionary = []
   for (var i=0; i<commands.length; i++) {
     var cmd = commands[i]
@@ -5873,7 +5874,7 @@ T = function(text) {
              elapsed = object.time - k[i-1].time,
              duration = k[i].time - k[i-1].time
   */
-CakeJS.Timeline = Klass({
+CakeJS.Timeline = CakeJS.Klass({
   startTime : null,
   repeat : false,
   lastAction : 0,
@@ -5938,7 +5939,7 @@ CakeJS.Timeline = Klass({
     }
   }
 })
-CakeJS.Transformable = Klass({
+CakeJS.Transformable = CakeJS.Klass({
   needMatrixUpdate : true,
 
   /**

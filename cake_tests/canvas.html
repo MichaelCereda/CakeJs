@@ -1,8 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<script type="text/javascript" src="soundmanager2.js"></script>
 <script type="text/javascript" src="../dist/cake-1.0.0.js"></script>
+<script type="text/javascript" src="soundmanager2.js"></script>
 <script type="text/javascript" src="support.js"></script>
 <script language="JavaScript" type="text/javascript">
 /*
@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.selectorElement = selectorElement
       this.controlsElement = controlsElement
       this.canvasElement = canvas
-      this.canvas = new Canvas(this.canvasElement)
+      this.canvas = new CakeJS.Canvas(this.canvasElement)
       this.canvas.playOnlyWhenFocused = false
       var debug = E('div')
       var t0 = -1
@@ -183,7 +183,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     initialize : function(canvas, controlContainer) {
       this.canvas = canvas
-      this.scene = new CanvasNode()
+      this.scene = new CakeJS.CanvasNode()
       this.scene.effect = this
       this.controlContainer = controlContainer
       this.controlPanel = new GuiConfig({

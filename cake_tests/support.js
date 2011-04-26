@@ -177,7 +177,7 @@ Object.prettyFunctionString = function(str) {
   })
 
 */
-GuiConfig = Klass({
+GuiConfig = CakeJS.Klass({
 
   object : null,
   container : null,
@@ -333,7 +333,7 @@ GuiConfig.widgets = {
     e.onchange = function() {
       GuiConfig.widgets.__setValue(obj, methodName, varName, this.value)
     }
-    return p
+    return p;
   },
 
   boolean : function(config) {
