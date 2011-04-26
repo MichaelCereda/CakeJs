@@ -590,7 +590,7 @@ if (!String.prototype.strip) {
     return this.replace(/^\s+|\s+$/g, '')
   }
 }
-CakeJS.Animatable = CakeJS.Klass({
+CakeJS.Animatable = CakeJS.Klass(CakeJS.CanvasNode,{
   tweenFunctions : {
     linear : function(v) { return v },
 

@@ -38,8 +38,8 @@ cake:
 #	@@cat ${DIST}	| sed s/@COPYRIGHT/$(COPYRIGHT)/ > ${DIST}
 
 	@@echo "(function (window, undefined) {" >> ${DIST}
-	@@cat ${SRC}/main.js\
-	      ${SRC}/Utils/*.js\
+	@@cat ${SRC}/main.js \
+	      ${SRC}/Utils/*.js \
 	      ${SRC}/Cake/*.js \
 		  ${SRC}/last.js >> ${DIST}
 	@@echo "})(window);" >> ${DIST}
