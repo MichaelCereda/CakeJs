@@ -1,0 +1,14 @@
+{
+  "name"          : "cakejs",
+  "description"   : "CAKE - Canvas Animation Kit Experiment",
+  "url"           : "https://github.com/MichaelCereda/CakeJs",
+  "keywords"      : ["javascript", "canvas", "cakejs"],
+  "author"        : "Ilmari Heikkinen <>",
+  "contributors"  : ["Michael Cereda <info@cmyklove.com>"],
+  "copyright"     : "Copyright (C) 2007  Ilmari Heikkinen",
+  "license"       : "Released under the MIT license.  ",
+  "version"       : "1.0.0",
+  "main"          : "./js/main",
+  "directories"   : { "test": "./test" },
+  "engines"       : { "node": ">=0.2.0" }
+}
