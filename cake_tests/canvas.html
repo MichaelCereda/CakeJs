@@ -534,7 +534,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     
     initialize : function(canvas, controlContainer) {
       Effect.initialize.call(this, canvas, controlContainer)
-      rect = new Path([
+      rect = new CakeJS.Path([
         ['moveTo', [-50, -50]],
         ['lineTo', [-50, 0]],
         ['lineTo', [0, 50]],
@@ -702,7 +702,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makeCurve : function(r,g,b,a,rotation) {
-      var curve = new Path([
+      var curve = new CakeJS.Path([
         ['moveTo', [-180, -100]],
         ['bezierCurveTo', [-100, -100, 0, 0, 0, 0]],
         ['bezierCurveTo', [0, 0, -100, 100, -180, 100]]
@@ -910,7 +910,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       var black70 = 'rgba(0,0,0,0.7)'
       matte.shadowColor = black70
       matte.strokeWidth = 2
-      var text = new TextNode(image.src.split("/").last())
+      var text = new CakeJS.TextNode(image.src.split("/").last())
       text.x = 8
       text.font = 'bold 24px URW Gothic L, Sans-Serif'
       text.fill = 'rgba(255,255,255,0.5)'
@@ -1245,7 +1245,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       bc.scale = [5,10]
       bc.zIndex = -1
       bc.origFillStyle = 'rgba(240,220,10,1)'
-      var hand = new Path(
+      var hand = new CakeJS.Path(
       [
         ["moveTo", [-10, 30]],
         ["quadraticCurveTo", [45, -200, 70, -80]],
@@ -2028,7 +2028,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 //       this.canvas.showFpsHistogram = false
       this.canvas.fill = 'white'
       this.canvas.frameDuration = 10
-      var brush = new Polygon([], {closePath: false})
+      var brush = new CakeJS.Polygon([], {closePath: false})
       brush.strokeWidth = 1
       brush.stroke = 'black'
       this.needClear = true
@@ -2110,7 +2110,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     createSummoningCircle : function(x, y) {
       var c = new CakeJS.Circle(1, {x: x, y: y, stroke:'cyan'})
-      var p = new Polygon([])
+      var p = new CakeJS.Polygon([])
       p.stroke = true
       for (var i=0; i<6; i++) {
         p.segments.push(Math.cos(i*Math.PI/3))
@@ -2259,8 +2259,8 @@ OTHER DEALINGS IN THE SOFTWARE.
         s.append(cp)
         i++
       })
-      var path = new Path([['moveTo', a], ['bezierCurveTo', [b,c,d].flatten()]], {stroke:'rgba(10,20,30,0.3)',zIndex:-1})
-      var poly = new Polygon([a,b,c,d].flatten(), {closePath: false, stroke:'rgba(40,30,0,0.3)', zIndex: 0.5})
+      var path = new CakeJS.Path([['moveTo', a], ['bezierCurveTo', [b,c,d].flatten()]], {stroke:'rgba(10,20,30,0.3)',zIndex:-1})
+      var poly = new CakeJS.Polygon([a,b,c,d].flatten(), {closePath: false, stroke:'rgba(40,30,0,0.3)', zIndex: 0.5})
       this.canvas.addEventListener('mouseup', function() {
         if (focused)
           focused.fill = 'rgba(40,30,0,0.3)'
@@ -2769,7 +2769,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         this.width = el.eWidth+20
       })
       var a = new AudioNode(src, {transformSound : true})
-      var play = new Polygon([30, 0, -20, -20, -20, 20], {fill: 'black', opacity: 0.3})
+      var play = new CakeJS.Polygon([30, 0, -20, -20, -20, 20], {fill: 'black', opacity: 0.3})
       a.when('ready', function(){ play.animateTo('opacity', 1, 800, 'square') })
       a.when('error', function(){
         play.append(new CakeJS.Rectangle(50, 10, {fill:'darkred', absoluteOpacity: 1, centered: true, rotation: Math.PI/4}))

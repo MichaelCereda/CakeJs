@@ -961,7 +961,7 @@ CakeJS.Animatable.uid = 0;
     do your own in-fill-checking. Which is done for circles and rectangles
     in CakeJS.Circle#isPointInPath and CakeJS.Rectangle#isPointInPath.
     Paths use an inaccurate bounding box test, implemented in
-    Path#isPointInPath.
+    CakeJS.Path#isPointInPath.
 
     Firefox 3 has isPointInPath. But it uses user-space coordinates.
     Which can be easily navigated around because it has setTransform.
@@ -2929,10 +2929,10 @@ CakeJS.SVGParser = {
     animateMotion : function(c,cn) {
       var path
       if (c.getAttribute('path')) {
-        path = new Path(c.getAttribute('path'))
+        path = new CakeJS.Path(c.getAttribute('path'))
       } else if (c.getAttribute('values')) {
         var vals = c.getAttribute('values')
-        path = new Path("M" + vals.split(";").join("L"))
+        path = new CakeJS.Path("M" + vals.split(";").join("L"))
       } else if (c.getAttribute('from') || c.getAttribute('to') || c.getAttribute('by')) {
         var from = c.getAttribute('from')
         var to = c.getAttribute('to')
@@ -2940,7 +2940,7 @@ CakeJS.SVGParser = {
         if (!from) from = "0,0"
         if (!to) to = "l" + by
         else to = "L" + to
-        path = new Path("M" + from + to)
+        path = new CakeJS.Path("M" + from + to)
       }
       var p = new CakeJS.CanvasNode()
       p.__motionPath = path
@@ -3119,16 +3119,16 @@ CakeJS.SVGParser = {
     },
 
     path : function(c) {
-      return new Path(c.getAttribute("d"))
+      return new CakeJS.Path(c.getAttribute("d"))
     },
 
     polygon : function(c) {
-      return new Polygon(c.getAttribute("points").toString().strip()
+      return new CakeJS.Polygon(c.getAttribute("points").toString().strip()
                           .split(/[\s,]+/).map(parseFloat))
     },
 
     polyline : function(c) {
-      return new Polygon(c.getAttribute("points").toString().strip()
+      return new CakeJS.Polygon(c.getAttribute("points").toString().strip()
                           .split(/[\s,]+/).map(parseFloat), {closePath:false})
     },
 
@@ -3172,7 +3172,7 @@ CakeJS.SVGParser = {
 
     text : function(c, cn) {
       if (false) {
-        var p = new TextNode(c.textContent.strip())
+        var p = new CakeJS.TextNode(c.textContent.strip())
         p.setAsPath(true)
         p.cx = this.parseUnit(c.getAttribute('x'),cn, 'x') || 0
         p.cy = this.parseUnit(c.getAttribute('y'),cn, 'y') || 0
@@ -6626,11 +6626,11 @@ CakeJS.Line = CakeJS.Klass(CakeJS.Drawable, {
   }
 })
 /**
-  Path is used for creating custom paths.
+  CakeJS.Path is used for creating custom paths.
 
   Attributes: segments, closePath.
 
-    var path = new Path([
+    var path = new CakeJS.Path([
       ['moveTo', [-50, -60]],
       ['lineTo', [30, 50],
       ['lineTo', [-50, 50]],
@@ -6654,7 +6654,7 @@ CakeJS.Line = CakeJS.Klass(CakeJS.Drawable, {
 
   You can also pass an SVG path string as segments.
 
-    var path = new Path("M 100 100 L 300 100 L 200 300 z", {
+    var path = new CakeJS.Path("M 100 100 L 300 100 L 200 300 z", {
       stroke: true, strokeStyle: 'blue',
       fill: true, fillStyle: 'red',
       lineWidth: 3
@@ -7185,7 +7185,7 @@ CakeJS.Path = CakeJS.Klass(CakeJS.Drawable, {
   }
 })
 /**
-  Polygon is used for creating paths consisting of straight line
+  CakeJS.Polygon is used for creating paths consisting of straight line
   segments.
 
   Attributes:
@@ -7435,7 +7435,7 @@ CakeJS.Spiral = CakeJS.Klass(CakeJS.Drawable, {
   }
 })
 /**
-  TextNode is used for drawing text on a canvas.
+  CakeJS.TextNode is used for drawing text on a canvas.
 
   Attributes:
 
