@@ -1,7 +1,7 @@
 <html>
 <head>
   <title>MISSILE FLEET</title>
-  <script type="text/javascript" src="../dist/cake.js"></script>
+  <script type="text/javascript" src="../dist/cake-1.0.0.js"></script>
   <script type="text/javascript" src="support.js"></script>
   <script type="text/javascript">
     /*
@@ -288,7 +288,7 @@
     }
 
 
-    Formation = Klass({
+    Formation = CakeJS.Klass({
       initialize : function() {
         this.ships = []
         for (var i=0; i<arguments.length; i++)
@@ -322,7 +322,7 @@
     })
 
 
-    Explosion = Klass(CakeJS.CanvasNode, {
+    Explosion = CakeJS.Klass(CakeJS.CanvasNode, {
       catchMouse : false,
       cursor : 'default',
       
@@ -363,7 +363,7 @@
 
 
 
-    ControlledNode = Klass(CakeJS.CanvasNode, {
+    ControlledNode = CakeJS.Klass(CakeJS.CanvasNode, {
       rotation : 0,
       targetAngle : 0,
 
@@ -455,7 +455,7 @@
 
 
 
-    Ship = Klass(ControlledNode, {
+    Ship = CakeJS.Klass(ControlledNode, {
       isShip : true,
       target : null,
       health : 100,
@@ -538,7 +538,7 @@
       warpIn : function() {
         this.opacity = 0
         this.aiDisabled = true
-        this.warpModel = new Spiral(0, {stroke: 'blue', zIndex : -1})
+        this.warpModel = new CakeJS.Spiral(0, {stroke: 'blue', zIndex : -1})
         this.warpModel.animateTo('endAngle', 40, 500, 'square')
         this.warpModel.after(500, function() {
           this.animateTo('endAngle', 0, 500, 'square')
@@ -760,7 +760,7 @@
 
 
 
-    Projectile = Klass(ControlledNode, {
+    Projectile = CakeJS.Klass(ControlledNode, {
       zIndex : 2,
       catchMouse : false,
       
@@ -819,7 +819,7 @@
       
     })
     
-    Weapon = Klass(CakeJS.CanvasNode, {
+    Weapon = CakeJS.Klass(CakeJS.CanvasNode, {
       catchMouse : false,
       movementSpeed : 100,
       turningSpeed : 1,
@@ -871,7 +871,7 @@
 
 
 
-    RapidFireRailgun = Klass(Weapon, {
+    RapidFireRailgun = CakeJS.Klass(Weapon, {
       isMissile : true,
       movementSpeed : 500,
       turningSpeed : 0,
@@ -935,7 +935,7 @@
       }
     })
 
-    Missiles = Klass(Weapon, {
+    Missiles = CakeJS.Klass(Weapon, {
       isMissile : true,
       movementSpeed : 160,
       turningSpeed : 3,
@@ -1013,7 +1013,7 @@
       }
     })
 
-    Beam = Klass(Weapon, {
+    Beam = CakeJS.Klass(Weapon, {
       movementSpeed : 200,
       turningSpeed : 6,
       health : 1,
@@ -1110,7 +1110,7 @@
 
     })
     
-    Railgun = Klass(Weapon, {
+    Railgun = CakeJS.Klass(Weapon, {
       isMissile : true,
       movementSpeed : 550,
       turningSpeed : 0.2,
@@ -1221,7 +1221,7 @@
 
 
 
-    PointDefenseMissiles = Klass(Weapon, {
+    PointDefenseMissiles = CakeJS.Klass(Weapon, {
       movementSpeed : 250,
       turningSpeed : 4,
       health : 1,
@@ -1264,7 +1264,7 @@
 
     })
 
-    PointDefenseGun = Klass(Weapon, {
+    PointDefenseGun = CakeJS.Klass(Weapon, {
       movementSpeed : 450,
       turningSpeed : 0,
       health : 1,
@@ -1311,7 +1311,7 @@
 
 
 
-    Level = Klass(CakeJS.CanvasNode, {
+    Level = CakeJS.Klass(CakeJS.CanvasNode, {
       bgColor : 'rgb(0,0,0)',
       bgOpacity : 0.15,
 
@@ -1607,7 +1607,7 @@
 
 
 
-    Level1 = Klass(Level, {
+    Level1 = CakeJS.Klass(Level, {
       width : 640,
       height : 480,
 
@@ -1626,7 +1626,7 @@
 
     })
   
-    Level2 = Klass(Level, {
+    Level2 = CakeJS.Klass(Level, {
       width : 1280,
       height : 960,
       scale : 0.5,
@@ -1654,7 +1654,7 @@
 
     })
   
-    Level3 = Klass(Level, {
+    Level3 = CakeJS.Klass(Level, {
       width : 1280,
       height : 960,
 
@@ -1675,7 +1675,7 @@
     })
     
     
-    Level4 = Klass(Level, {
+    Level4 = CakeJS.Klass(Level, {
       name : "Against smaller numbers",
       description : "This should be easy, right?",
       
@@ -1705,7 +1705,7 @@
     })
 
 
-    Level5 = Klass(Level, {
+    Level5 = CakeJS.Klass(Level, {
       name : "Not fair",
       description : "Well, that's life.",
 
@@ -1729,7 +1729,7 @@
     })
 
 
-    Level6 = Klass(Level, {
+    Level6 = CakeJS.Klass(Level, {
       name : "Ye Good Ole Slug-Out",
       description : "Tactics, schmactics.",
 
@@ -1751,7 +1751,7 @@
     })
 
 
-    Level7 = Klass(Level, {
+    Level7 = CakeJS.Klass(Level, {
       name : "Missiles are awesome",
       description : "And make the computer slow doooown.",
 
@@ -1775,7 +1775,7 @@
     })
 
 
-    Level8 = Klass(Level, {
+    Level8 = CakeJS.Klass(Level, {
       name : "Railguns are awesome too",
       description : "But take oh so long to reload.",
 
@@ -1805,7 +1805,7 @@
     })
 
     
-    Level9 = Klass(Level, {
+    Level9 = CakeJS.Klass(Level, {
       name : "Duels",
       description : "Cheese is awesome as well.",
 
@@ -1828,7 +1828,7 @@
     })
 
 
-    Level10 = Klass(Level, {
+    Level10 = CakeJS.Klass(Level, {
       name : "Relaaax",
       description : "An intermission.",
 
@@ -1865,7 +1865,7 @@
     })
 
 
-    Level11 = Klass(Level, {
+    Level11 = CakeJS.Klass(Level, {
       name : "Encounter",
       description : "Even fight.",
 
@@ -1892,7 +1892,7 @@
     })
 
 
-    Level12 = Klass(Level, {
+    Level12 = CakeJS.Klass(Level, {
       name : "Skirmish",
       description : "Take out the blue ships.",
 
@@ -1943,7 +1943,7 @@
     })
 
 
-    Level13 = Klass(Level, {
+    Level13 = CakeJS.Klass(Level, {
       name : "Random encounter",
       description : "How will you cope?",
 
@@ -1966,7 +1966,7 @@
     })
 
 
-    MenuLevel = Klass(Level, {
+    MenuLevel = CakeJS.Klass(Level, {
       width : 1280,
       height : 960,
       playerTeam : null,
@@ -2095,7 +2095,7 @@
 
 
 
-    MissileFleet = Klass(CakeJS.CanvasNode, {
+    MissileFleet = CakeJS.Klass(CakeJS.CanvasNode, {
       levelIndex : 0,
       levels : [MenuLevel, Level1, Level2, Level3, Level4, Level5, Level6, Level7, Level8, Level9, Level10, Level11, Level12, Level13],
     
@@ -2358,6 +2358,6 @@
     <p>Fastest on Webkit nightly.</p>
     <h3>Released under the MIT license</h3>
   </div>
-  <script type="text/javascript">init()</script>
+  <script type="text/javascript">init();</script>
 </body>
 </html>

@@ -7383,7 +7383,7 @@ CakeJS.Rectangle = CakeJS.Klass(CakeJS.Drawable, {
   }
 })
 /**
-  A Spiral is a function graph drawn in polar coordinates from startAngle to
+  A CakeJS.Spiral is a function graph drawn in polar coordinates from startAngle to
   endAngle. And the source of all life energy, etc.
   */
 CakeJS.Spiral = CakeJS.Klass(CakeJS.Drawable, {

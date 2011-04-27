@@ -158,14 +158,14 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.canvas.context = false
       this.canvas.showFpsHistogram = true
       this.canvas.redrawOnlyWhenChanged = false
-      var Klass = window[name];
-      this.effectObject = new Klass(this.canvas, this.controlsElement);
+      var cClass = window[name];
+      this.effectObject = new cClass(this.canvas, this.controlsElement);
       this.canvas.append(this.effectObject.scene);
       this.effectTitle.innerHTML = name;
       this.effectObject.controlPanel.show();
       this.canvas.play();
       if (!noSourceUpdate) {
-        $('sourceText').value = name + ' = CakeJS.Klass(Effect, ' + Object.toSource(Klass.ancestors.last()) + ')\n'
+        $('sourceText').value = name + ' = CakeJS.Klass(Effect, ' + Object.toSource(cClass.ancestors.last()) + ')\n'
 	  }
     }
   })
@@ -2089,7 +2089,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     createSpiral : function(x,y) {
-      var sp = new Spiral(0, {x: x, y: y, stroke:'cyan'})
+      var sp = new CakeJS.Spiral(0, {x: x, y: y, stroke:'cyan'})
       sp.startRadius = 1
       if (this.spiro) {
         sp.radiusFunction = function(a) {

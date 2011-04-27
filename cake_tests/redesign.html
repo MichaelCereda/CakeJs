@@ -4,7 +4,7 @@
 <script type="text/javascript" src="support.js"></script>
 <script language="JavaScript" type="text/javascript">
 
-Design = Klass({
+Design = CakeJS.Klass({
 
   initialize : function(canvas) {
     this.canvas = canvas
@@ -164,14 +164,14 @@ Design = Klass({
   }
 })
 
-Effect = Klass({
+Effect = CakeJS.Klass({
   initialize : function(canvas) {
     this.canvas = canvas
     this.scene = new CakeJS.CanvasNode()
     this.scene.effect = this
   }
 })
-Circles = Klass(Effect, {
+Circles = CakeJS.Klass(Effect, {
   description : 'Circles on a sine wave. Use fixed timestep for smooth traces.',
   controls : [
     'stroke',
