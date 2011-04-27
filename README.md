@@ -3,7 +3,7 @@ You could think of it as SVG sans the XML and not be too far off.
 Released under the MIT license.  
 
 The original repository is located at http://code.google.com/p/cakejs/  
-The library was created by Ilmari Heikkinen and is currently mantained by Michael Cereda [http://cmyklove.com]
+The library was created by Ilmari Heikkinen and this repository is currently mantained by Michael Cereda http://cmyklove.com
   
 Copyright (C) 2007  Ilmari Heikkinen  
   
