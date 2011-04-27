@@ -1,5 +1,5 @@
 /*
-  CAKE - Canvas Animation Kit Experiment
+  CAKE - CakeJS.Canvas Animation Kit Experiment
 
   Copyright (C) 2007  Ilmari Heikkinen
 
@@ -336,7 +336,7 @@ GuiConfig.widgets = {
     return p;
   },
 
-  boolean : function(config) {
+  "boolean" : function(config) {
     var obj = config.object
     var methodName = config.methodName
     var varName = config.varName
@@ -353,7 +353,7 @@ GuiConfig.widgets = {
     return p
   },
 
-  float : function(config) {
+  "float" : function(config) {
     var start = config.values[0]
     var end = config.values[1]
     return this.slider(function(d) {
@@ -361,7 +361,7 @@ GuiConfig.widgets = {
     }, config)
   },
 
-  int : function(config) {
+  "int" : function(config) {
     var start = config.values[0]
     var end = config.values[1]
     return this.slider(function(d) {
@@ -378,14 +378,14 @@ GuiConfig.widgets = {
     var canvas = E.canvas(200,10)
     p.appendChild(canvas)
     p.appendChild(E('span', title))
-    var c = new Canvas(canvas, {redrawOnlyWhenChanged : true})
-    var slider = new CanvasNode()
-    var bar = new Rectangle(196, 2)
+    var c = new CakeJS.Canvas(canvas, {redrawOnlyWhenChanged : true})
+    var slider = new CakeJS.CanvasNode()
+    var bar = new CakeJS.Rectangle(196, 2)
     bar.x = 2
     bar.y = 4
     bar.stroke = 'rgba(0,0,0,0.5)'
     bar.fill = 'rgba(255,255,255,0.5)'
-    var knob = new Rectangle(20,10)
+    var knob = new CakeJS.Rectangle(20,10)
     knob.x = 178
     knob.y = 0
     knob.zIndex = 2
@@ -396,7 +396,7 @@ GuiConfig.widgets = {
     var value = 1.0
     var down = false
     canvas.addEventListener('mousedown', function(e) {
-      var xy = Mouse.getRelativeCoords(this,e)
+      var xy = CakeJS.Mouse.getRelativeCoords(this,e)
       x = xy.x
       down = true
       value = (x - 12) / 176
@@ -407,7 +407,7 @@ GuiConfig.widgets = {
       c.changed = true
     }, false)
     canvas.addEventListener('mousemove', function(e) {
-      var xy = Mouse.getRelativeCoords(this,e)
+      var xy = CakeJS.Mouse.getRelativeCoords(this,e)
       if (down && x != null) {
         var dx = xy.x - x
         var d = dx / 176

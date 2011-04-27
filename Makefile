@@ -40,7 +40,12 @@ cake:
 	@@echo "(function (window, undefined) {" >> ${DIST}
 	@@cat ${SRC}/main.js \
 	      ${SRC}/Utils/*.js \
-	      ${SRC}/Cake/*.js \
+	      ${SRC}/Cake/Base/*.js \
+	      ${SRC}/Cake/Components/CanvasNode.js \
+	      ${SRC}/Cake/Components/ElementNode.js \
+	      ${SRC}/Cake/Components/Canvas.js \
+	      ${SRC}/Cake/Components/Drawable.js \
+	      ${SRC}/Cake/Components/Drawables/*.js \
 		  ${SRC}/last.js >> ${DIST}
 	@@echo "})(window);" >> ${DIST}
 	

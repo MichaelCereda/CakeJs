@@ -324,7 +324,7 @@ if (!Function.prototype.bind) {
     }
   })
 
-  Rectangle = CakeJS.Klass(Shape, {
+  CakeJS.Rectangle = CakeJS.Klass(Shape, {
     initialize : function(x, y) {
       this.x = x
       this.y = y
@@ -337,7 +337,7 @@ if (!Function.prototype.bind) {
 
   Square = CakeJS.Klass(Rectangle, {
     initialize : function(s) {
-      Rectangle.initialize.call(this, s, s)
+      CakeJS.Rectangle.initialize.call(this, s, s)
     }
   })
 
@@ -354,7 +354,7 @@ CakeJS.Klass = function() {
   c.prototype = {};
   for(var i = 0; i<arguments.length; i++) {
     var a = arguments[i];
-    if( a == undefined) continue;
+    //if( a == undefined) continue;
     if (a.prototype) {
       Object.extend(c.prototype, a.prototype);
     } else {
@@ -590,7 +590,7 @@ if (!String.prototype.strip) {
     return this.replace(/^\s+|\s+$/g, '')
   }
 }
-CakeJS.Animatable = CakeJS.Klass(CakeJS.CanvasNode,{
+CakeJS.Animatable = CakeJS.Klass({
   tweenFunctions : {
     linear : function(v) { return v },
 
@@ -821,7 +821,7 @@ CakeJS.Animatable = CakeJS.Klass(CakeJS.CanvasNode,{
     if (typeof(variable) != 'function')
       this[variable] = Object.clone(start)
     var ani = {
-      id : Animatable.uid++,
+      id : CakeJS.Animatable.uid++,
       variable : variable,
       startValue : start,
       endValue : end,
@@ -949,1645 +949,6 @@ CakeJS.Animatable = CakeJS.Klass(CakeJS.CanvasNode,{
 });
 CakeJS.Animatable.uid = 0;
 /**
-  Canvas is the canvas manager class.
-  It takes care of updating and drawing its childNodes on a canvas element.
-
-  An example with a rotating rectangle:
-
-    var c = E.canvas(500, 500)
-    var canvas = new Canvas(c)
-    var rect = new Rectangle(100, 100)
-    rect.x = 250
-    rect.y = 250
-    rect.fill = true
-    rect.fillStyle = 'green'
-    rect.addFrameListener(function(t) {
-      this.rotation = ((t / 3000) % 1) * Math.PI * 2
-    })
-    canvas.append(rect)
-    document.body.appendChild(c)
-
-
-  To use the canvas as a manually updated image:
-
-    var canvas = new Canvas(E.canvas(200,40), {
-      isPlaying : false,
-      redrawOnlyWhenChanged : true
-    })
-    var c = new Circle(20)
-    c.x = 100
-    c.y = 20
-    c.fill = true
-    c.fillStyle = 'red'
-    c.addFrameListener(function(t) {
-      if (this.root.absoluteMouseX != null) {
-        this.x = this.root.mouseX // relative to canvas surface
-        this.root.changed = true
-      }
-    })
-    canvas.append(c)
-
-
-  Or by using raw onFrame-calls:
-
-    var canvas = new Canvas(E.canvas(200,40), {
-      isPlaying : false,
-      fill : true,
-      fillStyle : 'white'
-    })
-    var c = new Circle(20)
-    c.x = 100
-    c.y = 20
-    c.fill = true
-    c.fillStyle = 'red'
-    canvas.append(c)
-    canvas.onFrame()
-
-
-  Which is also the recommended way to use a canvas inside another canvas:
-
-    var canvas = new Canvas(E.canvas(200,40), {
-      isPlaying : false
-    })
-    var c = new Circle(20, {
-      x: 100, y: 20,
-      fill: true, fillStyle: 'red'
-    })
-    canvas.append(c)
-
-    var topCanvas = new Canvas(E.canvas(500, 500))
-    var canvasImage = new ImageNode(canvas.canvas, {x: 250, y: 250})
-    topCanvas.append(canvasImage)
-    canvasImage.addFrameListener(function(t) {
-      this.rotation = (t / 3000 % 1) * Math.PI * 2
-      canvas.onFrame(t)
-    })
-
-  */
-CakeJS.Canvas = CakeJS.Klass(CakeJS.CanvasNode, {
-
-  clear : true,
-  frameLoop : false,
-  recording : false,
-  opacity : 1,
-  frame : 0,
-  elapsed : 0,
-  frameDuration : 30,
-  speed : 1.0,
-  time : 0,
-  fps : 0,
-  currentRealFps : 0,
-  currentFps : 0,
-  fpsFrames : 30,
-  startTime : 0,
-  realFps : 0,
-  fixedTimestep : false,
-  playOnlyWhenFocused : true,
-  isPlaying : true,
-  redrawOnlyWhenChanged : false,
-  changed : true,
-  drawBoundingBoxes : false,
-  cursor : 'default',
-
-  mouseDown : false,
-  mouseEvents : [],
-
-  // absolute pixel coordinates from canvas top-left
-  absoluteMouseX : null,
-  absoluteMouseY : null,
-
-  /*
-    Coordinates relative to the canvas's surface scale.
-    Example:
-      canvas.width
-      #=> 100
-      canvas.style.width
-      #=> '100px'
-      canvas.absoluteMouseX
-      #=> 50
-      canvas.mouseX
-      #=> 50
-
-      canvas.style.width = '200px'
-      canvas.width
-      #=> 100
-      canvas.absoluteMouseX
-      #=> 100
-      canvas.mouseX
-      #=> 50
-  */
-  mouseX : null,
-  mouseY : null,
-
-  elementNodeZIndexCounter : 0,
-
-  initialize : function(canvas, config) {
-    if (arguments.length > 2) {
-      var container = arguments[0]
-      var w = arguments[1]
-      var h = arguments[2]
-      var config = arguments[3]
-      var canvas = E.canvas(w,h)
-      var canvasContainer = E('div', canvas, {style:
-        {overflow:'hidden', width:w+'px', height:h+'px', position:'relative'}
-      })
-      this.canvasContainer = canvasContainer
-      if (container)
-        container.appendChild(canvasContainer)
-    }
-    CakeJS.CanvasNode.initialize.call(this, config)
-    this.mouseEventStack = []
-    this.canvas = canvas
-    canvas.canvas = this
-    this.width = this.canvas.width
-    this.height = this.canvas.height
-    var th = this
-    this.frameHandler = function() { th.onFrame() }
-    this.canvas.addEventListener('DOMNodeInserted', function(ev) {
-      if (ev.target == this)
-        th.addEventListeners()
-    }, false)
-    this.canvas.addEventListener('DOMNodeRemoved', function(ev) {
-      if (ev.target == this)
-        th.removeEventListeners()
-    }, false)
-    if (this.canvas.parentNode) this.addEventListeners()
-    this.startTime = new Date().getTime()
-    if (this.isPlaying)
-      this.play()
-  },
-
-  // FIXME
-  removeEventListeners : function() {
-  },
-
-  addEventListeners : function() {
-    var th = this
-    this.canvas.parentNode.addMouseEvent = function(e){
-      var xy = Mouse.getRelativeCoords(this, e)
-      th.absoluteMouseX = xy.x
-      th.absoluteMouseY = xy.y
-      var style = document.defaultView.getComputedStyle(th.canvas,"")
-      var w = parseFloat(style.getPropertyValue('width'))
-      var h = parseFloat(style.getPropertyValue('height'))
-      th.mouseX = th.absoluteMouseX * (w / th.canvas.width)
-      th.mouseY = th.absoluteMouseY * (h / th.canvas.height)
-      th.addMouseEvent(th.mouseX, th.mouseY, th.mouseDown)
-    }
-    this.canvas.parentNode.contains = this.contains
-
-    this.canvas.parentNode.addEventListener('mousedown', function(e) {
-      th.mouseDown = true
-      if (th.keyTarget != th.target) {
-        if (th.keyTarget)
-          th.dispatchEvent({type: 'blur', canvasTarget: th.keyTarget})
-        th.keyTarget = th.target
-        if (th.keyTarget)
-          th.dispatchEvent({type: 'focus', canvasTarget: th.keyTarget})
-      }
-      this.addMouseEvent(e)
-    }, true)
-
-    this.canvas.parentNode.addEventListener('mouseup', function(e) {
-      this.addMouseEvent(e)
-      th.mouseDown = false
-    }, true)
-
-    this.canvas.parentNode.addEventListener('mousemove', function(e) {
-      this.addMouseEvent(e)
-      if (th.prevClientX == null) {
-        th.prevClientX = e.clientX
-        th.prevClientY = e.clientY
-      }
-      if (th.dragTarget) {
-        var nev = document.createEvent('MouseEvents')
-        nev.initMouseEvent('drag', true, true, window, e.detail,
-          e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
-          e.shiftKey, e.metaKey, e.button, e.relatedTarget)
-        nev.canvasTarget = th.dragTarget
-        nev.dx = e.clientX - th.prevClientX
-        nev.dy = e.clientY - th.prevClientY
-        th.dragX += nev.dx
-        th.dragY += nev.dy
-        th.dispatchEvent(nev)
-      }
-      if (!th.mouseDown) {
-        if (th.dragTarget) {
-          var nev = document.createEvent('MouseEvents')
-          nev.initMouseEvent('dragend', true, true, window, e.detail,
-            e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
-            e.shiftKey, e.metaKey, e.button, e.relatedTarget)
-          nev.canvasTarget = th.dragTarget
-          th.dispatchEvent(nev)
-          th.dragX = th.dragY = 0
-          th.dragTarget = false
-        }
-      } else if (!th.dragTarget && th.target) {
-        th.dragTarget = th.target
-        var nev = document.createEvent('MouseEvents')
-        nev.initMouseEvent('dragstart', true, true, window, e.detail,
-          e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
-          e.shiftKey, e.metaKey, e.button, e.relatedTarget)
-        nev.canvasTarget = th.dragTarget
-        th.dragStartX = e.clientX
-        th.dragStartY = e.clientY
-        th.dragX = th.dragY = 0
-        th.dispatchEvent(nev)
-      }
-      th.prevClientX = e.clientX
-      th.prevClientY = e.clientY
-    }, true)
-
-    this.canvas.parentNode.addEventListener('mouseout', function(e) {
-      if (!CanvasNode.contains.call(this, e.relatedTarget))
-        th.absoluteMouseX = th.absoluteMouseY = th.mouseX = th.mouseY = null
-    }, true)
-
-    var dispatch = this.dispatchEvent.bind(this)
-    var types = [
-      'mousemove', 'mouseover', 'mouseout',
-      'click', 'dblclick',
-      'mousedown', 'mouseup',
-      'keypress', 'keydown', 'keyup',
-      'DOMMouseScroll', 'mousewheel', 'mousemultiwheel', 'textInput',
-      'focus', 'blur'
-    ]
-    for (var i=0; i<types.length; i++) {
-      this.canvas.parentNode.addEventListener(types[i], dispatch, false)
-    }
-    this.keys = {}
-
-    this.windowEventListeners = {
-
-      keydown : function(ev) {
-        if (th.keyTarget) {
-          th.updateKeys(ev)
-          ev.canvasTarget = th.keyTarget
-          th.dispatchEvent(ev)
-        }
-      },
-
-      keyup : function(ev) {
-        if (th.keyTarget) {
-          th.updateKeys(ev)
-          ev.canvasTarget = th.keyTarget
-          th.dispatchEvent(ev)
-        }
-      },
-
-      // do we even want to have this?
-      keypress : function(ev) {
-        if (th.keyTarget) {
-          ev.canvasTarget = th.keyTarget
-          th.dispatchEvent(ev)
-        }
-      },
-
-      blur : function(ev) {
-        th.absoluteMouseX = th.absoluteMouseY = null
-        if (th.playOnlyWhenFocused && th.isPlaying) {
-          th.stop()
-          th.__blurStop = true
-        }
-      },
-
-      focus : function(ev) {
-        if (th.__blurStop && !th.isPlaying) th.play()
-      },
-
-      mouseup : function(e) {
-        th.mouseDown = false
-        if (th.dragTarget) {
-          // TODO
-          // find the object that receives the drag (i.e. drop target)
-          var nev = document.createEvent('MouseEvents')
-          nev.initMouseEvent('dragend', true, true, window, e.detail,
-            e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
-            e.shiftKey, e.metaKey, e.button, e.relatedTarget)
-          nev.canvasTarget = th.dragTarget
-          th.dispatchEvent(nev)
-          th.dragTarget = false
-        }
-        if (!th.canvas.parentNode.contains(e.target)) {
-          var rv = th.dispatchEvent(e)
-          if (th.keyTarget) {
-            th.dispatchEvent({type: 'blur', canvasTarget: th.keyTarget})
-            th.keyTarget = null
-          }
-          return rv
-        }
-      },
-
-      mousemove : function(ev) {
-        if (th.__blurStop && !th.isPlaying) th.play()
-        if (!th.canvas.parentNode.contains(ev.target) && th.mouseDown)
-          return th.dispatchEvent(ev)
-      }
-
-    }
-
-    this.canvas.parentNode.addEventListener('DOMNodeRemoved', function(ev) {
-      if (ev.target == this)
-        th.removeWindowEventListeners()
-    }, false)
-    this.canvas.parentNode.addEventListener('DOMNodeInserted', function(ev) {
-      if (ev.target == this)
-        th.addWindowEventListeners()
-    }, false)
-    if (this.canvas.parentNode.parentNode) this.addWindowEventListeners()
-  },
-
-  updateKeys : function(ev) {
-    this.keys.shift = ev.shiftKey
-    this.keys.ctrl = ev.ctrlKey
-    this.keys.alt = ev.altKey
-    this.keys.meta = ev.metaKey
-    var state = (ev.type == 'keydown')
-    switch (ev.keyCode) {
-      case 37: this.keys.left = state; break
-      case 38: this.keys.up = state; break
-      case 39: this.keys.right = state; break
-      case 40: this.keys.down = state; break
-      case 32: this.keys.space = state; break
-      case 13: this.keys.enter = state; break
-      case 9: this.keys.tab = state; break
-      case 8: this.keys.backspace = state; break
-      case 16: this.keys.shift = state; break
-      case 17: this.keys.ctrl = state; break
-      case 18: this.keys.alt = state; break
-    }
-    this.keys[ev.keyCode] = state
-  },
-
-  addWindowEventListeners : function() {
-    for (var i in this.windowEventListeners)
-      window.addEventListener(i, this.windowEventListeners[i], false)
-  },
-
-  removeWindowEventListeners : function() {
-    for (var i in this.windowEventListeners)
-      window.removeEventListener(i, this.windowEventListeners[i], false)
-  },
-
-  addMouseEvent : function(x,y,mouseDown) {
-    var a = this.allocMouseEvent()
-    a[0] = x
-    a[1] = y
-    a[2] = mouseDown
-    this.mouseEvents.push(a)
-  },
-
-  allocMouseEvent : function() {
-    if (this.mouseEventStack.length > 0) {
-      return this.mouseEventStack.pop()
-    } else {
-      return [null, null, null]
-    }
-  },
-
-  freeMouseEvent : function(ev) {
-    this.mouseEventStack.push(ev)
-    if (this.mouseEventStack.length > 100)
-      this.mouseEventStack.splice(0,this.mouseEventStack.length)
-  },
-
-  clearMouseEvents : function() {
-    while (this.mouseEvents.length > 0)
-      this.freeMouseEvent(this.mouseEvents.pop())
-  },
-
-  createFrameLoop : function() {
-    var self = this;
-    var fl = {
-      running : true,
-      stop : function() {
-        this.running = false;
-      },
-      run : function() {
-        if (fl.running) {
-          self.onFrame();
-          requestAnimFrame(fl.run, self.canvas);
-        }
-      }
-    };
-    requestAnimFrame(fl.run, this.canvas);
-    return fl;
-  },
-
-  /**
-    Start frame loop.
-
-    The frame loop is an interval, where #onFrame is called every
-    #frameDuration milliseconds.
-    */
-  play : function() {
-    this.stop();
-    this.realTime = new Date().getTime();
-    this.frameLoop = this.createFrameLoop();
-    this.isPlaying = true;
-  },
-
-  /**
-    Stop frame loop.
-    */
-  stop : function() {
-    this.__blurStop = false;
-    if (this.frameLoop) {
-      this.frameLoop.stop();
-      this.frameLoop = null;
-    }
-    this.isPlaying = false;
-  },
-
-  dispatchEvent : function(ev) {
-    var rv = CanvasNode.prototype.dispatchEvent.call(this, ev)
-    if (ev.cursor) {
-      if (this.canvas.style.cursor != ev.cursor)
-        this.canvas.style.cursor = ev.cursor
-    } else {
-      if (this.canvas.style.cursor != this.cursor)
-        this.canvas.style.cursor = this.cursor
-    }
-    return rv
-  },
-
-  /**
-    The frame loop function. Called every #frameDuration milliseconds.
-    Takes an optional external time parameter (for syncing Canvases with each
-    other, e.g. when using a Canvas as an image.)
-
-    If the time parameter is given, the second parameter is used as the frame
-    time delta (i.e. the time elapsed since last frame.)
-
-    If time or timeDelta is not given, the canvas computes its own timeDelta.
-
-    @param time The external time. Optional.
-    @param timeDelta Time since last frame in milliseconds. Optional.
-    */
-  onFrame : function(time, timeDelta) {
-    this.elementNodeZIndexCounter = 0
-    var ctx = this.getContext()
-    try {
-      var realTime = new Date().getTime()
-      this.currentRealElapsed = (realTime - this.realTime)
-      this.currentRealFps = 1000 / this.currentRealElapsed
-      var dt = this.frameDuration * this.speed
-      if (!this.fixedTimestep)
-        dt = this.currentRealElapsed * this.speed
-      this.realTime = realTime
-      if (time != null) {
-        this.time = time
-        if (timeDelta)
-          dt = timeDelta
-      } else {
-        this.time += dt
-      }
-      this.previousTarget = this.target
-      this.target = null
-      if (this.catchMouse)
-        this.handlePick(ctx)
-      if (this.previousTarget != this.target) {
-        if (this.previousTarget) {
-          var nev = document.createEvent('MouseEvents')
-          nev.initMouseEvent('mouseout', true, true, window,
-            0, 0, 0, 0, 0, false, false, false, false, 0, null)
-          nev.canvasTarget = this.previousTarget
-          this.dispatchEvent(nev)
-        }
-        if (this.target) {
-          var nev = document.createEvent('MouseEvents')
-          nev.initMouseEvent('mouseover', true, true, window,
-            0, 0, 0, 0, 0, false, false, false, false, 0, null)
-          nev.canvasTarget = this.target
-          this.dispatchEvent(nev)
-        }
-      }
-      this.handleUpdate(this.time, dt)
-      this.clearMouseEvents()
-      if (!this.redrawOnlyWhenChanged || this.changed) {
-        try {
-          this.handleDraw(ctx)
-        } catch(e) {
-          console.log(e)
-          throw(e)
-        }
-        this.changed = false
-      }
-      this.currentElapsed = (new Date().getTime() - this.realTime)
-      this.elapsed += this.currentElapsed
-      this.currentFps = 1000 / this.currentElapsed
-      this.frame++
-      if (this.frame % this.fpsFrames == 0) {
-        this.fps = this.fpsFrames*1000 / (this.elapsed)
-        this.realFps = this.fpsFrames*1000 / (new Date().getTime() - this.startTime)
-        this.elapsed = 0
-        this.startTime = new Date().getTime()
-      }
-    } catch(e) {
-      if (ctx) {
-        // screwed up, context is borked
-        try {
-          // FIXME don't be stupid
-          for (var i=0; i<1000; i++)
-            ctx.restore()
-        } catch(er) {}
-      }
-      delete this.context
-      throw(e)
-    }
-  },
-
-  /**
-    Returns the canvas drawing context object.
-
-    @return Canvas drawing context
-    */
-  getContext : function() {
-    if (this.recording)
-      return this.getRecordingContext()
-    else if (this.useMockContext)
-      return this.getMockContext()
-    else
-      return this.get2DContext()
-  },
-
-  /**
-    Gets and returns an augmented canvas 2D drawing context.
-
-    The canvas 2D context is augmented by setter functions for all
-    its instance variables, making it easier to record canvas operations in
-    a cross-browser fashion.
-    */
-  get2DContext : function() {
-    if (!this.context) {
-      var ctx = CanvasSupport.getContext(this.canvas, '2d')
-      this.context = ctx
-    }
-    return this.context
-  },
-
-  /**
-    Creates and returns a mock drawing context.
-
-    @return Mock drawing context
-    */
-  getMockContext : function() {
-    if (!this.fakeContext) {
-      var ctx = this.get2DContext()
-      this.fakeContext = {}
-      var f = function(){ return this }
-      for (var i in ctx) {
-        if (typeof(ctx[i]) == 'function')
-          this.fakeContext[i] = f
-        else
-          this.fakeContext[i] = ctx[i]
-      }
-      this.fakeContext.isMockObject = true
-      this.fakeContext.addColorStop = f
-    }
-    return this.fakeContext
-  },
-
-  getRecordingContext : function() {
-    if (!this.recordingContext)
-      this.recordingContext = new CakeJS.RecordingContext()
-    return this.recordingContext
-  },
-
-  /**
-    Canvas drawPickingPath uses the canvas rectangle as its path.
-
-    @param ctx Canvas drawing context
-    */
-  drawPickingPath : function(ctx) {
-    ctx.rect(0,0, this.canvas.width, this.canvas.height)
-  },
-
-  isPointInPath : function(x,y) {
-    return ((x >= 0) && (x <= this.canvas.width) && (y >= 0) && (y <= this.canvas.height))
-  },
-
-  /**
-    Sets globalAlpha to this.opacity and clears the canvas if #clear is set to
-    true. If #fill is also set to true, fills the canvas rectangle instead of
-    clearing (using #fillStyle as the color.)
-
-    @param ctx Canvas drawing context
-    */
-  draw : function(ctx) {
-    ctx.setGlobalAlpha( this.opacity )
-    if (this.clear) {
-      if (ctx.fillOn) {
-        ctx.beginPath()
-        ctx.rect(0,0, this.canvas.width, this.canvas.height)
-        ctx.fill()
-      } else {
-        ctx.clearRect(0,0, this.canvas.width, this.canvas.height)
-      }
-    }
-    // set default fill and stroke for the canvas contents
-    ctx.fillStyle = 'black'
-    ctx.strokeStyle = 'black'
-    ctx.fillOn = false
-    ctx.strokeOn = false
-  }
-})
-
-
-/**
-  Hacky link class for emulating <a>.
-
-  The correct way would be to have a real <a> under the cursor while hovering
-  this, or an imagemap polygon built from the clipped subtree path.
-
-  @param href Link href.
-  @param target Link target, defaults to _self.
-  @param config Optional config hash.
-  */
-LinkNode = CakeJS.Klass(CakeJS.CanvasNode, {
-  href : null,
-  target : '_self',
-  cursor : 'pointer',
-
-  initialize : function(href, target, config) {
-    this.href = href
-    if (target)
-      this.target = target
-    CakeJS.CanvasNode.initialize.call(this, config)
-    this.setupLinkEventListeners()
-  },
-
-  setupLinkEventListeners : function() {
-    this.addEventListener('click', function(ev) {
-      if (ev.button == Mouse.RIGHT) return
-      var target = this.target
-      if ((ev.ctrlKey || ev.button == Mouse.MIDDLE) && target == '_self')
-        target = '_blank'
-      window.open(this.href, target)
-    }, false)
-  }
-})
-
-
-/**
-  AudioNode is a CanvasNode used to play a sound.
-
-  */
-AudioNode = CakeJS.Klass(CakeJS.CanvasNode, {
-  ready : false,
-  autoPlay : false,
-  playing : false,
-  paused : false,
-  pan : 0,
-  volume : 1,
-  loop : false,
-
-  transformSound : false,
-
-  initialize : function(filename, params) {
-    CakeJS.CanvasNode.initialize.call(this, params)
-    this.filename = filename
-    this.when('load', this._autoPlaySound)
-    this.loadSound()
-  },
-
-  loadSound : function() {
-    this.sound = CakeJS.CanvasSupport.getSoundObject()
-    if (!this.sound) return
-    var self = this
-    this.sound.onready = function() {
-      self.ready = true
-      self.root.dispatchEvent({type: 'ready', canvasTarget: self})
-    }
-    this.sound.onload = function() {
-      self.loaded = true
-      self.root.dispatchEvent({type: 'load', canvasTarget: self})
-    }
-    this.sound.onerror = function() {
-      self.root.dispatchEvent({type: 'error', canvasTarget: self})
-    }
-    this.sound.onfinish = function() {
-      if (self.loop) self.play()
-      else self.stop()
-    }
-    this.sound.load(this.filename)
-  },
-
-  play : function() {
-    this.playing = true
-    this.needPlayUpdate = true
-  },
-
-  stop : function() {
-    this.playing = false
-    this.needPlayUpdate = true
-  },
-
-  pause : function() {
-    if (this.needPauseUpdate) {
-      this.needPauseUpdate = false
-      return
-    }
-    this.paused = !this.paused
-    this.needPauseUpdate = true
-  },
-
-  setVolume : function(v) {
-    this.volume = v
-    this.needStatusUpdate = true
-  },
-
-  setPan : function(p) {
-    this.pan = p
-    this.needStatusUpdate = true
-  },
-
-  handleUpdate : function() {
-    CakeJS.CanvasNode.handleUpdate.apply(this, arguments)
-    if (this.willBeDrawn) {
-      this.transform(null, true)
-      if (!this.sound) this.loadSound()
-      if (this.ready) {
-        if (this.transformSound) {
-          var x = this.currentMatrix[4]
-          var y = this.currentMatrix[5]
-          var a = this.currentMatrix[2]
-          var b = this.currentMatrix[3]
-          var c = this.currentMatrix[0]
-          var d = this.currentMatrix[1]
-          var hw = this.root.width * 0.5
-          var ys = Math.sqrt(a*a + b*b)
-          var xs = Math.sqrt(c*c + d*d)
-          this.setVolume(ys)
-          this.setPan((x - hw) / hw)
-        }
-        if (this.needPauseUpdate) {
-          this.needPauseUpdate = false
-          this._pauseSound()
-        }
-        if (this.needPlayUpdate) {
-          this.needPlayUpdate = false
-          if (this.playing) this._playSound()
-          else this._stopSound()
-        }
-        if (this.needStatusUpdate) {
-          this._setSoundVolume()
-          this._setSoundPan()
-        }
-      }
-    }
-  },
-
-  _autoPlaySound : function() {
-    if (this.autoPlay) this.play()
-  },
-
-  _setSoundVolume : function() {
-    this.sound.setVolume(this.volume)
-  },
-
-  _setSoundPan : function() {
-    this.sound.setPan(this.pan)
-  },
-
-  _playSound : function() {
-    if (this.sound.play() == false)
-      return this.playing = false
-    this.root.dispatchEvent({type: 'play', canvasTarget: this})
-  },
-
-  _stopSound : function() {
-    this.sound.stop()
-    this.root.dispatchEvent({type: 'stop', canvasTarget: this})
-  },
-
-  _pauseSound : function() {
-    this.sound.pause()
-    this.root.dispatchEvent({type: this.paused ? 'pause' : 'play', canvasTarget: this})
-  }
-})
-/**
-  CanvasNode is the base CAKE scenegraph node. All the other scenegraph nodes
-  derive from it. A plain CanvasNode does no drawing, but it can be used for
-  grouping other nodes and setting up the group's drawing state.
-
-  var scene = new CanvasNode({x: 10, y: 10})
-
-  The usual way to use CanvasNodes is to append them to a Canvas object:
-
-    var scene = new CanvasNode()
-    scene.append(new Rectangle(40, 40, {fill: true}))
-    var elem = E.canvas(400, 400)
-    var canvas = new Canvas(elem)
-    canvas.append(scene)
-
-  You can also use CanvasNodes to draw directly to a canvas element:
-
-    var scene = new CanvasNode()
-    scene.append(new Circle(40, {x:200, y:200, stroke: true}))
-    var elem = E.canvas(400, 400)
-    scene.handleDraw(elem.getContext('2d'))
-
-  */
-CakeJS.CanvasNode = CakeJS.Klass(CakeJS.Animatable, CakeJS.Transformable, {
-  OBJECTBOUNDINGBOX : 'objectBoundingBox',
-
-  // whether to draw the node and its childNodes or not
-  visible : true,
-
-  // whether to draw the node (doesn't affect subtree)
-  drawable : true,
-
-  // the CSS display property can be used to affect 'visible'
-  // false     => visible = visible
-  // 'none'    => visible = false
-  // otherwise => visible = true
-  display : null,
-
-  // the CSS visibility property can be used to affect 'drawable'
-  // false     => drawable = drawable
-  // 'hidden'  => drawable = false
-  // otherwise => drawable = true
-  visibility : null,
-
-  // whether this and the subtree from this register mouse hover
-  catchMouse : true,
-
-  // Whether this object registers mouse hover. Only set this to true when you
-  // have a drawable object that can be picked. Otherwise the object requires
-  // a matrix inversion on Firefox 2 and Safari, which is slow.
-  pickable : false,
-
-  // true if this node or one of its descendants is under the mouse
-  // cursor and catchMouse is true
-  underCursor : false,
-
-  // zIndex in relation to sibling nodes (note: not global)
-  zIndex : 0,
-
-  // x translation of the node
-  x : 0,
-
-  // y translation of the node
-  y : 0,
-
-  // scale factor: number for uniform scaling, [x,y] for dimension-wise
-  scale : 1,
-
-  // Rotation of the node, in radians.
-  //
-  // The rotation can also be the array [angle, cx, cy],
-  // where cx and cy define the rotation center.
-  //
-  // The array form is equivalent to
-  // translate(cx, cy); rotate(angle); translate(-cx, -cy);
-  rotation : 0,
-
-  // Transform matrix with which to multiply the current transform matrix.
-  // Applied after all other transformations.
-  matrix : null,
-
-  // Transform matrix with which to replace the current transform matrix.
-  // Applied before any other transformation.
-  absoluteMatrix : null,
-
-  // SVG-like list of transformations to apply.
-  // The different transformations are:
-  // ['translate', [x,y]]
-  // ['rotate', [angle, cx, cy]] - (optional) cx and cy are the rotation center
-  // ['scale', [x,y]]
-  // ['matrix', [m11, m12, m21, m22, dx, dy]]
-  transformList : null,
-
-  // fillStyle for the node and its descendants
-  // Possibilities:
-  //   null // use the previous
-  //   true      // use the previous but do fill
-  //   false     // use the previous but don't do fill
-  //   'none'    // use the previous but don't do fill
-  //
-  //   'white'
-  //   '#fff'
-  //   '#ffffff'
-  //   'rgba(255,255,255, 1.0)'
-  //   [255, 255, 255, 1.0]
-  //   new Gradient(...)
-  //   new Pattern(myImage, 'no-repeat')
-  fill : null,
-
-  // strokeStyle for the node and its descendants
-  // Possibilities:
-  //   null // use the previous
-  //   true      // use the previous but do stroke
-  //   false     // use the previous but don't do stroke
-  //   'none'    // use the previous but don't do stroke
-  //
-  //   'white'
-  //   '#fff'
-  //   '#ffffff'
-  //   'rgba(255,255,255, 1.0)'
-  //   [255, 255, 255, 1.0]
-  //   new Gradient(...)
-  //   new Pattern(myImage, 'no-repeat')
-  stroke : null,
-
-  // stroke line width
-  strokeWidth : null,
-
-  // stroke line cap style ('butt' | 'round' | 'square')
-  lineCap : null,
-
-  // stroke line join style ('bevel' | 'round' | 'miter')
-  lineJoin : null,
-
-  // stroke line miter limit
-  miterLimit : null,
-
-  // set globalAlpha to this value
-  absoluteOpacity : null,
-
-  // multiply globalAlpha by this value
-  opacity : null,
-
-  // fill opacity
-  fillOpacity : null,
-
-  // stroke opacity
-  strokeOpacity : null,
-
-  // set globalCompositeOperation to this value
-  // Possibilities:
-  // ( 'source-over' |
-  //   'copy' |
-  //   'lighter' |
-  //   'darker' |
-  //   'xor' |
-  //   'source-in' |
-  //   'source-out' |
-  //   'destination-over' |
-  //   'destination-atop' |
-  //   'destination-in' |
-  //   'destination-out' )
-  compositeOperation : null,
-
-  // Color for the drop shadow
-  shadowColor : null,
-
-  // Drop shadow blur radius
-  shadowBlur : null,
-
-  // Drop shadow's x-offset
-  shadowOffsetX : null,
-
-  // Drop shadow's y-offset
-  shadowOffsetY : null,
-
-  // HTML5 text API
-  font : null,
-  // horizontal position of the text origin
-  // 'left' | 'center' | 'right' | 'start' | 'end'
-  textAlign : null,
-  // vertical position of the text origin
-  // 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom'
-  textBaseline : null,
-
-  cursor : null,
-
-  changed : true,
-
-  tagName : 'g',
-
-  getNextSibling : function(){
-    if (this.parentNode)
-      return this.parentNode.childNodes[this.parentNode.childNodes.indexOf(this)+1]
-    return null
-  },
-
-  getPreviousSibling : function(){
-    if (this.parentNode)
-      return this.parentNode.childNodes[this.parentNode.childNodes.indexOf(this)-1]
-    return null
-  },
-
-  /**
-    Initialize the CanvasNode and merge an optional config hash.
-    */
-  initialize : function(config) {
-    this.root = this
-    this.currentMatrix = [1,0,0,1,0,0]
-    this.previousMatrix = [1,0,0,1,0,0]
-    this.needMatrixUpdate = true
-    this.childNodes = []
-    this.frameListeners = []
-    this.eventListeners = {}
-    CakeJS.Animatable.initialize.call(this)
-    if (config)
-      Object.extend(this, config)
-  },
-
-  /**
-    Create a clone of the node and its subtree.
-    */
-  clone : function() {
-    var c = Object.clone(this)
-    c.parent = c.root = null
-    for (var i in this) {
-      if (typeof(this[i]) == 'object')
-        c[i] = Object.clone(this[i])
-    }
-    c.parent = c.root = null
-    c.childNodes = []
-    c.setRoot(null)
-    for (var i=0; i<this.childNodes.length; i++) {
-      var ch = this.childNodes[i].clone()
-      c.append(ch)
-    }
-    return c
-  },
-
-  cloneNode : function(){ return this.clone() },
-
-  /**
-    Gets node by id.
-    */
-  getElementById : function(id) {
-    if (this.id == id)
-      return this
-    for (var i=0; i<this.childNodes.length; i++) {
-      var n = this.childNodes[i].getElementById(id)
-      if (n) return n
-    }
-    return null
-  },
-
-  $ : function(id) {
-    return this.getElementById(id)
-  },
-
-  /**
-    Alias for append().
-
-    @param Node[s] to append
-    */
-  appendChild : function() {
-    return this.append.apply(this, arguments)
-  },
-
-  /**
-    Appends arguments as childNodes to the node.
-
-    Adding a child sets child.parent to be the node and calls
-    child.setRoot(node.root)
-
-    @param Node[s] to append
-    */
-  append : function(obj) {
-    var a = $A(arguments)
-    for (var i=0; i<a.length; i++) {
-      if (a[i].parent) a[i].removeSelf()
-      this.childNodes.push(a[i])
-      a[i].parent = a[i].parentNode = this
-      a[i].setRoot(this.root)
-    }
-    this.changed = true
-  },
-
-  /**
-    Removes all childNodes from the node.
-    */
-  removeAllChildren : function() {
-    this.remove.apply(this, this.childNodes)
-  },
-
-  /**
-    Alias for remove().
-
-    @param Node[s] to remove
-    */
-  removeChild : function() {
-    return this.remove.apply(this, arguments)
-  },
-
-  /**
-    Removes arguments from the node's childNodes.
-
-    Removing a child sets its parent to null and calls
-    child.setRoot(null)
-
-    @param Child node[s] to remove
-    */
-  remove : function(obj) {
-    var a = arguments
-    for (var i=0; i<a.length; i++) {
-      this.childNodes.deleteFirst(a[i])
-      delete a[i].parent
-      delete a[i].parentNode
-      a[i].setRoot(null)
-    }
-    this.changed = true
-  },
-
-  /**
-    Calls this.parent.removeChild(this) if this.parent is set.
-    */
-  removeSelf : function() {
-    if (this.parentNode) {
-      this.parentNode.remove(this)
-    }
-  },
-
-  /**
-    Returns true if this node's subtree contains obj. (I.e. obj is this or
-    obj's parent chain includes this.)
-
-    @param obj Node to look for
-    @return True if obj is in this node's subtree, false if it isn't.
-    */
-  contains : function(obj) {
-    while (obj) {
-      if (obj == this) return true
-      obj = obj.parentNode
-    }
-    return false
-  },
-
-  /**
-    Set this.root to the given value and propagate the update to childNodes.
-
-    @param root The new root node
-    @private
-    */
-  setRoot : function(root) {
-    if (!root) root = this
-    this.dispatchEvent({type: 'rootChanged', canvasTarget: this, relatedTarget: root})
-    this.root = root
-    for (var i=0; i<this.childNodes.length; i++)
-      this.childNodes[i].setRoot(root)
-  },
-
-  /**
-    Adds a callback function to be called before drawing each frame.
-
-    @param f Callback function
-    */
-  addFrameListener : function(f) {
-    this.frameListeners.push(f)
-  },
-
-  /**
-    Removes a callback function from update callbacks.
-
-    @param f Callback function
-    */
-  removeFrameListener : function(f) {
-    this.frameListeners.deleteFirst(f)
-  },
-
-  addEventListener : function(type, listener, capture) {
-    if (!this.eventListeners[type])
-      this.eventListeners[type] = {capture:[], bubble:[]}
-    this.eventListeners[type][capture ? 'capture' : 'bubble'].push(listener)
-  },
-
-  /**
-    Synonym for addEventListener.
-  */
-  when : function(type, listener, capture) {
-    this.addEventListener(type, listener, capture || false)
-  },
-
-  removeEventListener : function(type, listener, capture) {
-    if (!this.eventListeners[type]) return
-    this.eventListeners[type][capture ? 'capture' : 'bubble'].deleteFirst(listener)
-    if (this.eventListeners[type].capture.length == 0 &&
-        this.eventListeners[type].bubble.length == 0)
-      delete this.eventListeners[type]
-  },
-
-  dispatchEvent : function(event) {
-    var type = event.type
-    if (!event.canvasTarget) {
-      if (type.search(/^(key|text)/i) == 0) {
-        event.canvasTarget = this.root.focused || this.root.target
-      } else {
-        event.canvasTarget = this.root.target
-      }
-      if (!event.canvasTarget)
-        event.canvasTarget = this
-    }
-    var path = []
-    var obj = event.canvasTarget
-    while (obj && obj != this) {
-      path.push(obj)
-      obj = obj.parent
-    }
-    path.push(this)
-    event.canvasPhase = 'capture'
-    for (var i=path.length-1; i>=0; i--)
-      if (!path[i].handleEvent(event)) return false
-    event.canvasPhase = 'bubble'
-    for (var i=0; i<path.length; i++)
-      if (!path[i].handleEvent(event)) return false
-    return true
-  },
-
-  broadcastEvent : function(event) {
-    var type = event.type
-    event.canvasPhase = 'capture'
-    if (!this.handleEvent(event)) return false
-    for (var i=0; i<this.childNodes.length; i++)
-      if (!this.childNodes[i].broadcastEvent(event)) return false
-    event.canvasPhase = 'bubble'
-    if (!this.handleEvent(event)) return false
-    return true
-  },
-
-  handleEvent : function(event) {
-    var type = event.type
-    var phase = event.canvasPhase
-    if (this.cursor && phase == 'capture')
-      event.cursor = this.cursor
-    var els = this.eventListeners[type]
-    els = els && els[phase]
-    if (els) {
-      for (var i=0; i<els.length; i++) {
-        var rv = els[i].call(this, event)
-        if (rv == false || event.stopped) {
-          if (!event.stopped)
-            event.stopPropagation()
-          event.stopped = true
-          return false
-        }
-      }
-    }
-    return true
-  },
-
-  /**
-    Handle scenegraph update.
-    Called with current time before drawing each frame.
-
-    This method should be touched only if you know what you're doing.
-    If you need your own update handler, either add a frame listener or
-    overwrite {@link CanvasNode#update}.
-
-    @param time Current animation time
-    @param timeDelta Time since last frame in milliseconds
-    */
-  handleUpdate : function(time, timeDelta) {
-    this.update(time, timeDelta)
-    this.willBeDrawn = (!this.parent || this.parent.willBeDrawn) && (this.display ? this.display != 'none' : this.visible)
-    for(var i=0; i<this.childNodes.length; i++)
-      this.childNodes[i].handleUpdate(time, timeDelta)
-    // TODO propagate dirty area bbox up the scene graph
-    if (this.parent && this.changed) {
-      this.parent.changed = this.changed
-      this.changed = false
-    }
-    this.needMatrixUpdate = true
-  },
-
-  /**
-    Update this node. Calls all frame listener callbacks in the order they
-    were added.
-
-    Overwrite this with your own method if you want to do things differently.
-
-    @param time Current animation time
-    @param timeDelta Time since last frame in milliseconds
-    */
-  update : function(time, timeDelta) {
-    // need to operate on a copy, otherwise bad stuff happens
-    var fl = this.frameListeners.slice(0)
-    for(var i=0; i<fl.length; i++) {
-      if (this.frameListeners.includes(fl[i]))
-        fl[i].apply(this, arguments)
-    }
-  },
-
-  /**
-    Tests if this node or its subtree is under the mouse cursor and
-    sets this.underCursor accordingly.
-
-    If this node (and not one of its childNodes) is under the mouse cursor
-    this.root.target is set to this. This way, the topmost (== drawn last)
-    node under the mouse cursor is the root target.
-
-    To see whether a subtree node is the current target:
-
-    if (this.underCursor && this.contains(this.root.target)) {
-      // we are the target, let's roll
-    }
-
-    This method should be touched only if you know what you're doing.
-    Overwrite {@link CanvasNode#drawPickingPath} to change the way the node's
-    picking path is created.
-
-    Called after handleUpdate, but before handleDraw.
-
-    @param ctx Canvas 2D context
-    */
-  handlePick : function(ctx) {
-    // CSS display & visibility
-    if (this.display)
-      this.visible = (this.display != 'none')
-    if (this.visibility)
-      this.drawable = (this.visibility != 'hidden')
-    this.underCursor = false
-    if (this.visible && this.catchMouse && this.root.absoluteMouseX != null) {
-      ctx.save()
-      this.transform(ctx, true)
-      if (this.pickable && this.drawable) {
-        if (ctx.isPointInPath) {
-          ctx.beginPath()
-          if (this.drawPickingPath)
-            this.drawPickingPath(ctx)
-        }
-        this.underCursor = CanvasSupport.isPointInPath(
-                              this.drawPickingPath ? ctx : false,
-                              this.root.mouseX,
-                              this.root.mouseY,
-                              this.currentMatrix,
-                              this)
-        if (this.underCursor)
-          this.root.target = this
-      } else {
-        this.underCursor = false
-      }
-      var c = this.__getChildrenCopy()
-      this.__zSort(c)
-      for(var i=0; i<c.length; i++) {
-        c[i].handlePick(ctx)
-        if (!this.underCursor)
-          this.underCursor = c[i].underCursor
-      }
-      ctx.restore()
-    } else {
-      var c = this.__getChildrenCopy()
-      while (c.length > 0) {
-        var c0 = c.pop()
-        if (c0.underCursor) {
-          c0.underCursor = false
-          Array.prototype.push.apply(c, c0.childNodes)
-        }
-      }
-    }
-  },
-
-  __zSort : function(c) {
-    c.stableSort(function(c1,c2) { return c1.zIndex - c2.zIndex; });
-  },
-
-  __getChildrenCopy : function() {
-    if (this.__childNodesCopy) {
-      while (this.__childNodesCopy.length > this.childNodes.length)
-        this.__childNodesCopy.pop()
-      for (var i=0; i<this.childNodes.length; i++)
-        this.__childNodesCopy[i] = this.childNodes[i]
-    } else {
-      this.__childNodesCopy = this.childNodes.slice(0)
-    }
-    return this.__childNodesCopy
-  },
-
-  /**
-    Returns true if the point x,y is inside the path of a drawable node.
-
-    The x,y point is in user-space coordinates, meaning that e.g. the point
-    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
-    transform on the rectangle.
-
-    Leave isPointInPath to false to avoid unnecessary matrix inversions for
-    non-drawables.
-
-    @param x X-coordinate of the point.
-    @param y Y-coordinate of the point.
-    @return Whether the point is inside the path of this node.
-    @type boolean
-    */
-  isPointInPath : false,
-
-  /**
-    Handles transforming and drawing the node and its childNodes
-    on each frame.
-
-    Pushes context state, applies state transforms and draws the node.
-    Then sorts the node's childNodes by zIndex, smallest first, and
-    calls their handleDraws in that order. Finally, pops the context state.
-
-    Called after handleUpdate and handlePick.
-
-    This method should be touched only if you know what you're doing.
-    Overwrite {@link CanvasNode#draw} when you need to draw things.
-
-    @param ctx Canvas 2D context
-    */
-  handleDraw : function(ctx) {
-    // CSS display & visibility
-    if (this.display)
-      this.visible = (this.display != 'none')
-    if (this.visibility)
-      this.drawable = (this.visibility != 'hidden')
-    if (!this.visible) return
-    ctx.save()
-    var pff = ctx.fontFamily
-    var pfs = ctx.fontSize
-    var pfo = ctx.fillOn
-    var pso = ctx.strokeOn
-    if (this.fontFamily)
-      ctx.fontFamily = this.fontFamily
-    if (this.fontSize)
-      ctx.fontSize = this.fontSize
-    this.transform(ctx)
-    if (this.clipPath) {
-      ctx.beginPath()
-      if (this.clipPath.units == this.OBJECTBOUNDINGBOX) {
-        var bb = this.getSubtreeBoundingBox(true)
-        ctx.save()
-        ctx.translate(bb[0], bb[1])
-        ctx.scale(bb[2], bb[3])
-        this.clipPath.createSubtreePath(ctx, true)
-        ctx.restore()
-        ctx.clip()
-      } else {
-        this.clipPath.createSubtreePath(ctx, true)
-        ctx.clip()
-      }
-    }
-    if (this.drawable && this.draw)
-      this.draw(ctx)
-    var c = this.__getChildrenCopy()
-    this.__zSort(c);
-    for(var i=0; i<c.length; i++) {
-      c[i].handleDraw(ctx)
-    }
-    ctx.fontFamily = pff
-    ctx.fontSize = pfs
-    ctx.fillOn = pfo
-    ctx.strokeOn = pso
-    ctx.restore()
-  },
-
-  /**
-    Transforms the context state according to this node's attributes.
-
-    @param ctx Canvas 2D context
-    @param onlyTransform If set to true, only do matrix transforms.
-    */
-  transform : function(ctx, onlyTransform) {
-    Transformable.prototype.transform.call(this, ctx)
-
-    if (onlyTransform) return
-
-    // stroke / fill modifiers
-    if (this.fill != null) {
-      if (!this.fill || this.fill == 'none') {
-        ctx.fillOn = false
-      } else {
-        ctx.fillOn = true
-        if (this.fill != true) {
-          var fillStyle = Colors.parseColorStyle(this.fill, ctx)
-          ctx.setFillStyle( fillStyle )
-        }
-      }
-    }
-    if (this.stroke != null) {
-      if (!this.stroke || this.stroke == 'none') {
-        ctx.strokeOn = false
-      } else {
-        ctx.strokeOn = true
-        if (this.stroke != true)
-          ctx.setStrokeStyle( Colors.parseColorStyle(this.stroke, ctx) )
-      }
-    }
-    if (this.strokeWidth != null)
-      ctx.setLineWidth( this.strokeWidth )
-    if (this.lineCap != null)
-      ctx.setLineCap( this.lineCap )
-    if (this.lineJoin != null)
-      ctx.setLineJoin( this.lineJoin )
-    if (this.miterLimit != null)
-      ctx.setMiterLimit( this.miterLimit )
-
-    // compositing modifiers
-    if (this.absoluteOpacity != null)
-      ctx.setGlobalAlpha( this.absoluteOpacity )
-    if (this.opacity != null)
-      ctx.setGlobalAlpha( ctx.globalAlpha * this.opacity )
-    if (this.compositeOperation != null)
-      ctx.setGlobalCompositeOperation( this.compositeOperation )
-
-    // shadow modifiers
-    if (this.shadowColor != null)
-      ctx.setShadowColor( Colors.parseColorStyle(this.shadowColor, ctx) )
-    if (this.shadowBlur != null)
-      ctx.setShadowBlur( this.shadowBlur )
-    if (this.shadowOffsetX != null)
-      ctx.setShadowOffsetX( this.shadowOffsetX )
-    if (this.shadowOffsetY != null)
-      ctx.setShadowOffsetY( this.shadowOffsetY )
-
-    // text modifiers
-    if (this.textAlign != null)
-      ctx.setTextAlign( this.textAlign )
-    if (this.textBaseline != null)
-      ctx.setTextBaseline( this.textBaseline )
-    if (this.font != null)
-      ctx.setFont( this.font )
-  },
-
-  /**
-    Draws the picking path for the node for testing if the mouse cursor
-    is inside the node.
-
-    False by default, overwrite if you need special behaviour.
-
-    @param ctx Canvas 2D context
-    */
-  drawPickingPath : false,
-
-  /**
-    Draws the node.
-
-    False by default, overwrite to actually draw something.
-
-    @param ctx Canvas 2D context
-    */
-  draw : false,
-
-  createSubtreePath : function(ctx, skipTransform) {
-    ctx.save()
-    if (!skipTransform) this.transform(ctx, true)
-    for (var i=0; i<this.childNodes.length; i++)
-      this.childNodes[i].createSubtreePath(ctx)
-    ctx.restore()
-  },
-
-  getSubtreeBoundingBox : function(identity) {
-    if (identity) {
-      var p = this.parent
-      this.parent = null
-      this.needMatrixUpdate = true
-    }
-    var bb = this.getAxisAlignedBoundingBox()
-    for (var i=0; i<this.childNodes.length; i++) {
-      var cbb = this.childNodes[i].getSubtreeBoundingBox()
-      if (!bb) {
-        bb = cbb
-      } else if (cbb) {
-        this.mergeBoundingBoxes(bb, cbb)
-      }
-    }
-    if (identity) {
-      this.parent = p
-      this.needMatrixUpdate = true
-    }
-    return bb
-  },
-
-  mergeBoundingBoxes : function(bb, bb2) {
-    if (bb[0] > bb2[0]) bb[0] = bb2[0]
-    if (bb[1] > bb2[1]) bb[1] = bb2[1]
-    if (bb[2]+bb[0] < bb2[2]+bb2[0]) bb[2] = bb2[2]+bb2[0]-bb[0]
-    if (bb[3]+bb[1] < bb2[3]+bb2[1]) bb[3] = bb2[3]+bb2[1]-bb[1]
-  },
-
-  getAxisAlignedBoundingBox : function() {
-    this.transform(null, true)
-    if (!this.getBoundingBox) return null
-    var bbox = this.getBoundingBox()
-    var xy1 = CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
-      bbox[0], bbox[1])
-    var xy2 = CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
-      bbox[0]+bbox[2], bbox[1]+bbox[3])
-    var xy3 = CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
-      bbox[0], bbox[1]+bbox[3])
-    var xy4 = CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
-      bbox[0]+bbox[2], bbox[1])
-    var x1 = Math.min(xy1[0], xy2[0], xy3[0], xy4[0])
-    var x2 = Math.max(xy1[0], xy2[0], xy3[0], xy4[0])
-    var y1 = Math.min(xy1[1], xy2[1], xy3[1], xy4[1])
-    var y2 = Math.max(xy1[1], xy2[1], xy3[1], xy4[1])
-    return [x1, y1, x2-x1, y2-y1]
-  },
-
-  makeDraggable : function() {
-    this.addEventListener('dragstart', function(ev) {
-      this.dragStartPosition = {x: this.x, y: this.y};
-      ev.stopPropagation();
-      ev.preventDefault();
-      return false;
-    }, false);
-    this.addEventListener('drag', function(ev) {
-      this.x = this.dragStartPosition.x + this.root.dragX / this.parent.currentMatrix[0];
-      this.y = this.dragStartPosition.y + this.root.dragY / this.parent.currentMatrix[3];
-      ev.stopPropagation();
-      ev.preventDefault();
-      return false;
-    }, false);
-  }
-})
-/**
   Navigating around differing implementations of canvas features.
 
   Current issues:
@@ -2598,7 +959,7 @@ CakeJS.CanvasNode = CakeJS.Klass(CakeJS.Animatable, CakeJS.Transformable, {
 
     Safari doesn't have isPointInPath. So you need to keep track of the CTM and
     do your own in-fill-checking. Which is done for circles and rectangles
-    in Circle#isPointInPath and Rectangle#isPointInPath.
+    in CakeJS.Circle#isPointInPath and CakeJS.Rectangle#isPointInPath.
     Paths use an inaccurate bounding box test, implemented in
     Path#isPointInPath.
 
@@ -2740,7 +1101,7 @@ CakeJS.CanvasSupport = {
   },
 
   /**
-    Canvas context augment module that adds setters.
+    CakeJS.Canvas context augment module that adds setters.
     */
   ContextSetterAugment : {
     setFillStyle : function(fs) { this.fillStyle = fs },
@@ -2765,7 +1126,7 @@ CakeJS.CanvasSupport = {
 
   ContextJSImplAugment : {
     identity : function() {
-      CanvasSupport.setTransform(this, [1,0,0,1,0,0])
+      CakeJS.CanvasSupport.setTransform(this, [1,0,0,1,0,0])
     }
   },
 
@@ -3281,7 +1642,7 @@ CakeJS.CanvasSupport = {
 
   /**
     Returns true if the browser can be coaxed to work with
-    {@link CanvasSupport.isPointInPath}.
+    {@link CakeJS.CanvasSupport.isPointInPath}.
 
     @return Whether the browser supports isPointInPath or not
     @type boolean
@@ -3295,7 +1656,7 @@ CakeJS.CanvasSupport = {
   /**
     Returns the coordinate system in which the isPointInPath of the
     browser operates. Possible coordinate systems are
-    CanvasSupport.DEVICE_SPACE and CanvasSupport.USER_SPACE.
+    CakeJS.CanvasSupport.DEVICE_SPACE and CakeJS.CanvasSupport.USER_SPACE.
 
     @return The coordinate system for the browser's isPointInPath
     */
@@ -3308,7 +1669,7 @@ CakeJS.CanvasSupport = {
   /**
     Detects the coordinate system in which the isPointInPath of the
     browser operates. Possible coordinate systems are
-    CanvasSupport.DEVICE_SPACE and CanvasSupport.USER_SPACE.
+    CakeJS.CanvasSupport.DEVICE_SPACE and CakeJS.CanvasSupport.USER_SPACE.
 
     @return The coordinate system for the browser's isPointInPath
     @private
@@ -3335,7 +1696,7 @@ CakeJS.CanvasSupport = {
     Returns true if the device-space point (x,y) is inside the fill of
     ctx's current path.
 
-    @param ctx Canvas 2D context to query
+    @param ctx CakeJS.Canvas 2D context to query
     @param x The distance in pixels from the left side of the canvas element
     @param y The distance in pixels from the top side of the canvas element
     @param matrix The current transformation matrix. Needed if the browser has
@@ -3505,11 +1866,11 @@ CakeJS.Colors = {
       'rgba(255,255,255, 1.0)'
       [255, 255, 255]
       [255, 255, 255, 1.0]
-      new Gradient(...)
-      new Pattern(...)
+      new CakeJS.Gradient(...)
+      new CakeJS.Pattern(...)
 
     @param style The color style to parse
-    @param ctx Canvas 2D context on which the style is to be used
+    @param ctx CakeJS.Canvas 2D context on which the style is to be used
     @return A parsed style, ready to be used as ctx.fillStyle / strokeStyle
     */
   parseColorStyle : function(style, ctx) {
@@ -3670,9 +2031,9 @@ CakeJS.Curves = {
     var addifclose = function(v, error) {
       var len = 0
       for (var i=0; i < 3; i++) {
-        len += Curves.lineLength(v[i], v[i+1])
+        len += CakeJS.Curves.lineLength(v[i], v[i+1])
       }
-      var chord = Curves.lineLength(v[0], v[3])
+      var chord = CakeJS.Curves.lineLength(v[0], v[3])
       if ((len - chord) > error) {
         var lr = bezsplit(v)
         len = addifclose(lr[0], error) + addifclose(lr[1], error)
@@ -3721,276 +2082,6 @@ CakeJS.Curves = {
     return {point: d.slice(0), angle: this.lineAngle(c,d)}
   }
 }
-/**
-  A Drawable is a CanvasNode with possible fill, stroke and clip.
-
-  It draws the path by calling #drawGeometry
-  */
-CakeJS.Drawable = CakeJS.Klass(CakeJS.CanvasNode, {
-  pickable : true,
-  //   'inside' // clip before drawing the stroke
-  // | 'above'  // draw stroke after the fill
-  // | 'below'  // draw stroke before the fill
-  strokeMode : 'above',
-
-  ABOVE : 'above', BELOW : 'below', INSIDE : 'inside',
-
-  initialize : function(config) {
-    CakeJS.CanvasNode.initialize.call(this, config)
-  },
-
-  /**
-    Draws the picking path for the Drawable.
-
-    The default version begins a new path and calls drawGeometry.
-
-    @param ctx Canvas drawing context
-    */
-  drawPickingPath : function(ctx) {
-    if (!this.drawGeometry) return
-    ctx.beginPath()
-    this.drawGeometry(ctx)
-  },
-
-  /**
-    Returns true if the point x,y is inside the path of a drawable node.
-
-    The x,y point is in user-space coordinates, meaning that e.g. the point
-    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
-    transform on the rectangle.
-
-    @param x X-coordinate of the point.
-    @param y Y-coordinate of the point.
-    @return Whether the point is inside the path of this node.
-    @type boolean
-    */
-  isPointInPath : function(x, y) {
-    return false
-  },
-
-  isVisible : function(ctx) {
-    var abb = this.getAxisAlignedBoundingBox()
-    if (!abb) return true
-    var x1 = abb[0], x2 = abb[0]+abb[2], y1 = abb[1], y2 = abb[1]+abb[3]
-    var w = this.root.width
-    var h = this.root.height
-    if (this.root.drawBoundingBoxes) {
-      ctx.save()
-        var bbox = this.getBoundingBox()
-        ctx.beginPath()
-        ctx.rect(bbox[0], bbox[1], bbox[2], bbox[3])
-        ctx.strokeStyle = 'green'
-        ctx.lineWidth = 1
-        ctx.stroke()
-      ctx.restore()
-      ctx.save()
-        CanvasSupport.setTransform(ctx, [1,0,0,1,0,0], this.currentMatrix)
-        ctx.beginPath()
-        ctx.rect(x1, y1, x2-x1, y2-y1)
-        ctx.strokeStyle = 'red'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-      ctx.restore()
-    }
-    var visible = !(x2 < 0 || x1 > w || y2 < 0 || y1 > h)
-    return visible
-  },
-
-  createSubtreePath : function(ctx, skipTransform) {
-    ctx.save()
-    if (!skipTransform) this.transform(ctx, true)
-    if (this.drawGeometry) this.drawGeometry(ctx)
-    for (var i=0; i<this.childNodes.length; i++)
-      this.childNodes[i].createSubtreePath(ctx)
-    ctx.restore()
-  },
-
-  /**
-    Draws the Drawable. Begins a path and calls this.drawGeometry, followed by
-    possibly filling, stroking and clipping the path, depending on whether
-    #fill, #stroke and #clip are set.
-
-    @param ctx Canvas drawing context
-    */
-  draw : function(ctx) {
-    if (!this.drawGeometry) return
-    // bbox checking is slower than just drawing in most cases.
-    // and caching the bboxes is hard to do correctly.
-    // plus, bboxes aren't hierarchical.
-    // so we are being glib :|
-    if (this.root.drawBoundingBoxes)
-      this.isVisible(ctx)
-    var ft = (ctx.fillStyle.transformList ||
-              ctx.fillStyle.matrix ||
-              ctx.fillStyle.scale != null ||
-              ctx.fillStyle.rotation ||
-              ctx.fillStyle.x ||
-              ctx.fillStyle.y )
-    var st = (ctx.strokeStyle.transformList ||
-              ctx.strokeStyle.matrix ||
-              ctx.strokeStyle.scale != null ||
-              ctx.strokeStyle.rotation ||
-              ctx.strokeStyle.x ||
-              ctx.strokeStyle.y )
-    ctx.beginPath()
-    this.drawGeometry(ctx)
-    if (ctx.strokeOn) {
-      switch (this.strokeMode) {
-        case this.ABOVE:
-          if (ctx.fillOn) this.doFill(ctx,ft)
-          this.doStroke(ctx, st)
-          break
-        case this.BELOW:
-          this.doStroke(ctx, st)
-          if (ctx.fillOn) this.doFill(ctx,ft)
-          break
-        case this.INSIDE:
-          if (ctx.fillOn) this.doFill(ctx,ft)
-          ctx.save()
-          var lw = ctx.lineWidth
-          ctx.setLineWidth(1)
-          this.doStroke(ctx, st)
-          ctx.setLineWidth(lw)
-          ctx.clip()
-          this.doStroke(ctx, st)
-          ctx.restore()
-          break
-      }
-    } else if (ctx.fillOn) {
-      this.doFill(ctx,ft)
-    }
-    this.drawMarkers(ctx)
-    if (this.clip) ctx.clip()
-  },
-
-  doFill : function(ctx, ft) {
-    if (ft || (this.getBoundingBox && ctx.fillStyle.units == this.OBJECTBOUNDINGBOX)) {
-      ctx.save()
-      if (this.getBoundingBox && ctx.fillStyle.units == this.OBJECTBOUNDINGBOX) {
-        var bb = this.getBoundingBox()
-        var sx = bb[2]
-        var sy = bb[3]
-        ctx.translate(bb[0],bb[1])
-        ctx.scale(sx,sy)
-      }
-      ctx.fillStyle.transform(ctx)
-    }
-    if (this.fillOpacity != null) {
-      var go = ctx.globalAlpha
-      ctx.setGlobalAlpha(go * this.fillOpacity)
-      ctx.fill()
-      ctx.globalAlpha = go
-    } else {
-      ctx.fill()
-    }
-    if (ft) ctx.restore()
-  },
-
-  doStroke : function(ctx, st) {
-    if (st || (this.getBoundingBox && ctx.strokeStyle.units == this.OBJECTBOUNDINGBOX)) {
-      ctx.save()
-      if (this.getBoundingBox && ctx.strokeStyle.units == this.OBJECTBOUNDINGBOX) {
-        var bb = this.getBoundingBox()
-        var sx = bb[2]
-        var sy = bb[3]
-        ctx.translate(bb[0],bb[1])
-        ctx.scale(sx,sy)
-      }
-      ctx.strokeStyle.needMatrixUpdate = true
-      ctx.strokeStyle.transform(ctx)
-      if (sx != null)
-        CanvasSupport.tScale(ctx.strokeStyle.currentMatrix, sx, sy)
-      var cm = ctx.strokeStyle.currentMatrix
-      // fix stroke width scale (non-uniform scales screw us up though)
-      var sw = Math.sqrt(Math.max(
-        cm[0]*cm[0] + cm[1]*cm[1],
-        cm[2]*cm[2] + cm[3]*cm[3]
-      ))
-      ctx.setLineWidth(((ctx.lineWidth == null) ? 1 : ctx.lineWidth) / sw)
-    }
-    if (this.strokeOpacity != null) {
-      var go = ctx.globalAlpha
-      ctx.setGlobalAlpha(go * this.strokeOpacity)
-      ctx.stroke()
-      ctx.globalAlpha = go
-    } else {
-      ctx.stroke()
-    }
-    if (st) ctx.restore()
-  },
-
-  drawMarkers : function(ctx) {
-    var sm = this.markerStart || this.marker
-    var em = this.markerEnd || this.marker
-    var mm = this.markerMid || this.marker
-    if (sm && this.getStartPoint) {
-      var pa = this.getStartPoint()
-      if (sm.orient != null && sm.orient != 'auto')
-        pa.angle = sm.orient
-      var scale = (sm.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
-      ctx.save()
-        ctx.translate(pa.point[0], pa.point[1])
-        ctx.scale(scale, scale)
-        ctx.rotate(pa.angle)
-        var mat = CanvasSupport.tRotate(
-          CanvasSupport.tScale(
-          CanvasSupport.tTranslate(
-            this.currentMatrix.slice(0),
-            pa.point[0], pa.point[1]
-          ), scale, scale), pa.angle)
-        sm.__copyMatrix(mat)
-        sm.handleDraw(ctx)
-      ctx.restore()
-    }
-    if (em && this.getEndPoint) {
-      var pa = this.getEndPoint()
-      if (em.orient != null && em.orient != 'auto')
-        pa.angle = em.orient
-      var scale = (em.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
-      ctx.save()
-        ctx.translate(pa.point[0], pa.point[1])
-        ctx.scale(scale, scale)
-        ctx.rotate(pa.angle)
-        var mat = CanvasSupport.tRotate(
-          CanvasSupport.tScale(
-          CanvasSupport.tTranslate(
-            this.currentMatrix.slice(0),
-            pa.point[0], pa.point[1]
-          ), scale, scale), pa.angle)
-        em.__copyMatrix(mat)
-        em.handleDraw(ctx)
-      ctx.restore()
-    }
-    if (mm && this.getMidPoints) {
-      var pas = this.getMidPoints()
-      var scale = (mm.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
-      for (var i=0; i<pas.length; i++) {
-        var pa = pas[i]
-        ctx.save()
-          ctx.translate(pa.point[0], pa.point[1])
-          ctx.scale(scale, scale)
-          if (mm.orient != null && mm.orient != 'auto')
-            pa.angle = em.orient
-          ctx.rotate(pa.angle)
-          var mat = CanvasSupport.tRotate(
-            CanvasSupport.tScale(
-            CanvasSupport.tTranslate(
-              this.currentMatrix.slice(0),
-              pa.point[0], pa.point[1]
-            ), scale, scale), pa.angle)
-          mm.__copyMatrix(mat)
-          mm.handleDraw(ctx)
-        ctx.restore()
-      }
-    }
-  },
-
-  getStartPoint : false,
-  getEndPoint : false,
-  getMidPoints : false,
-  getBoundingBox : false
-
-})
 /**
   Creates and configures a DOM element.
 
@@ -4074,212 +2165,7 @@ E.canvas = function(w,h,config) {
   return E('canvas', Object.extend(config, {id: id, width: w, height: h}))
 }
 /**
-  ElementNode is a CanvasNode that has an HTML element as its content.
-
-  The content is added to an absolutely positioned HTML element, which is added
-  to the root node's canvases parentNode. The content element follows the
-  current transformation matrix.
-
-  The opacity of the element is set to the globalAlpha of the drawing context
-  unless #noAlpha is true.
-
-  The font-size of the element is set to the current y-scale unless #noScaling
-  is true.
-
-  Use ElementNode when you need accessible web content in your animations.
-
-    var e = new ElementNode(
-      E('h1', 'HERZLICH WILLKOMMEN IM BAHNHOF'),
-      {
-        x : 40,
-        y : 30
-      }
-    )
-    e.addFrameListener(function(t) {
-      this.scale = 1 + 0.5*Math.cos(t/1000)
-    })
-
-  @param content An HTML element or string of HTML to use as the content.
-  @param config Optional config has.
-  */
-CakeJS.ElementNode = CakeJS.Klass(CakeJS.CanvasNode, {
-  noScaling : false,
-  noAlpha : false,
-  inherit : 'inherit',
-  align: null, // left | center | right
-  valign: null, // top | center | bottom
-  xOffset: 0,
-  yOffset: 0,
-
-  initialize : function(content, config) {
-    CakeJS.CanvasNode.initialize.call(this, config)
-    this.content = content
-    this.element = E('div', content)
-    this.element.style.MozTransformOrigin =
-    this.element.style.webkitTransformOrigin = '0 0'
-    this.element.style.position = 'absolute'
-  },
-
-  clone : function() {
-    var c = CakeJS.CanvasNode.prototype.clone.call(this)
-    if (this.content && this.content.cloneNode)
-      c.content = this.content.cloneNode(true)
-    c.element = E('div', c.content)
-    c.element.style.position = 'absolute'
-    c.element.style.MozTransformOrigin =
-    c.element.style.webkitTransformOrigin = '0 0'
-    return c
-  },
-
-  setRoot : function(root) {
-    CakeJS.CanvasNode.setRoot.call(this, root)
-    if (this.element && this.element.parentNode && this.element.parentNode.removeChild)
-      this.element.parentNode.removeChild(this.element)
-  },
-
-  handleUpdate : function(t, dt) {
-    CakeJS.CanvasNode.handleUpdate.call(this, t, dt)
-    if (!this.willBeDrawn || !this.visible || this.display == 'none' || this.visibility == 'hidden' || !this.drawable) {
-      if (this.element.style.display != 'none')
-        this.element.style.display = 'none'
-    } else if (this.element.style.display == 'none') {
-      this.element.style.display = 'block'
-    }
-  },
-
-  addEventListener : function(event, callback, capture) {
-    var th = this
-    var ccallback = function() { callback.apply(th, arguments) }
-    return this.element.addEventListener(event, ccallback, capture||false)
-  },
-
-  removeEventListener : function(event, callback, capture) {
-    var th = this
-    var ccallback = function() { callback.apply(th, arguments) }
-    return this.element.removeEventListener(event, ccallback, capture||false)
-  },
-
-  draw : function(ctx) {
-    if (this.cursor && this.element.style.cursor != this.cursor)
-      this.element.style.cursor = this.cursor
-    if (this.element.style.zIndex != this.root.elementNodeZIndexCounter)
-      this.element.style.zIndex = this.root.elementNodeZIndexCounter
-    this.root.elementNodeZIndexCounter++
-    var baseTransform = this.currentMatrix
-    xo = this.xOffset
-    yo = this.yOffset
-    if (this.fillBoundingBox && this.parent && this.parent.getBoundingBox) {
-      var bb = this.parent.getBoundingBox()
-      xo += bb[0]
-      yo += bb[1]
-    }
-    var xy = CanvasSupport.tMatrixMultiplyPoint(baseTransform.slice(0,4).concat([0,0]),
-      xo, yo)
-    var x = this.currentMatrix[4] + xy[0]
-    var y = this.currentMatrix[5] + xy[1]
-    var a = this.currentMatrix[2]
-    var b = this.currentMatrix[3]
-    var c = this.currentMatrix[0]
-    var d = this.currentMatrix[1]
-    var ys = Math.sqrt(a*a + b*b)
-    var xs = Math.sqrt(c*c + d*d)
-    if (ctx.fontFamily != null)
-      this.element.style.fontFamily = ctx.fontFamily
-
-    var wkt = CakeJS.CanvasSupport.isCSSTransformSupported()
-    if (wkt && !this.noScaling) {
-      this.element.style.MozTransform =
-      this.element.style.webkitTransform = 'matrix('+baseTransform.join(",")+')'
-    } else {
-      this.element.style.MozTransform =
-      this.element.style.webkitTransform = ''
-    }
-    if (ctx.fontSize != null) {
-      if (this.noScaling || wkt) {
-        this.element.style.fontSize = ctx.fontSize + 'px'
-      } else {
-        this.element.style.fontSize = ctx.fontSize * ys + 'px'
-      }
-    } else {
-      if (this.noScaling || wkt) {
-        this.element.style.fontSize = 'inherit'
-      } else {
-        this.element.style.fontSize = 100 * ys + '%'
-      }
-    }
-    if (this.noAlpha)
-      this.element.style.opacity = 1
-    else
-      this.element.style.opacity = ctx.globalAlpha
-    if (!this.element.parentNode && this.root.canvas.parentNode) {
-      this.element.style.visibility = 'hidden'
-      this.root.canvas.parentNode.appendChild(this.element)
-      var hidden = true
-    }
-    var fs = this.color || this.fill
-    if (this.parent) {
-      if (!fs || !fs.length)
-        fs = this.parent.color
-      if (!fs || !fs.length)
-        fs = this.parent.fill
-    }
-    if (!fs || !fs.length)
-      fs = ctx.fillStyle
-    if (typeof(fs) == 'string') {
-      if (fs.search(/^rgba\(/) != -1) {
-        this.element.style.color = 'rgb(' +
-          fs.match(/\d+/g).slice(0,3).join(",") +
-          ')'
-      } else {
-        this.element.style.color = fs
-      }
-    } else if (fs.length) {
-      this.element.style.color = 'rgb(' + fs.slice(0,3).map(Math.floor).join(",") + ')'
-    }
-    var dx = 0, dy = 0
-    if (bb) {
-      this.element.style.width = Math.floor(xs * bb[2]) + 'px'
-      this.element.style.height = Math.floor(ys * bb[3]) + 'px'
-      this.eWidth = xs
-      this.eHeight = ys
-    } else {
-      this.element.style.width = ''
-      this.element.style.height = ''
-      var align = this.align || this.textAnchor
-      var origin = [0,0]
-      if (align == 'center' || align == 'middle') {
-        dx = -this.element.offsetWidth / 2
-        origin[0] = '50%'
-      } else if (align == 'right') {
-        dx = -this.element.offsetWidth
-        origin[0] = '100%'
-      }
-      var valign = this.valign
-      if (valign == 'center' || valign == 'middle') {
-        dy = -this.element.offsetHeight / 2
-        origin[1] = '50%'
-      } else if (valign == 'bottom') {
-        dy = -this.element.offsetHeight
-        origin[1] = '100%'
-      }
-      this.element.style.webkitTransformOrigin =
-      this.element.style.MozTransformOrigin = origin.join(" ")
-      this.eWidth = this.element.offsetWidth / xs
-      this.eHeight = this.element.offsetHeight / ys
-    }
-    if (wkt && !this.noScaling) {
-      this.element.style.left = Math.floor(dx) + 'px'
-      this.element.style.top = Math.floor(dy) + 'px'
-    } else {
-      this.element.style.left = Math.floor(x+dx) + 'px'
-      this.element.style.top = Math.floor(y+dy) + 'px'
-    }
-    if (hidden)
-      this.element.style.visibility = 'visible'
-  }
-})
-/**
-  Gradient is a linear or radial color gradient that can be used as a
+  CakeJS.Gradient is a linear or radial color gradient that can be used as a
   strokeStyle or fillStyle.
 
   Attributes:
@@ -4303,7 +2189,7 @@ CakeJS.ElementNode = CakeJS.Klass(CakeJS.CanvasNode, {
 
   Example:
 
-    var g = new Gradient({
+    var g = new CakeJS.Gradient({
       type : 'radial',
       endRadius : 40,
       colorStops : [
@@ -4339,7 +2225,7 @@ CakeJS.Gradient = CakeJS.Klass({
     fill/strokeStyle.
 
     @param ctx Drawing context to compile pattern on.
-    @return Gradient object.
+    @return CakeJS.Gradient object.
     */
   compile : function(ctx) {
     if (this.type == 'linear') {
@@ -4362,7 +2248,7 @@ CakeJS.Gradient = CakeJS.Klass({
         go.addColorStop(cs[0], g)
       }
     }
-    Object.extend(go, Transformable.prototype)
+    Object.extend(go, CakeJS.Transformable.prototype)
     go.transformList = this.transformList
     go.scale = this.scale
     go.x = this.x
@@ -4421,13 +2307,13 @@ if (CakeJS.Browser == 'IE') {
   CakeJS.Mouse.LEFT = 1
   CakeJS.Mouse.MIDDLE = 4
 }/**
-  Pattern is a possibly repeating image that can be used as a strokeStyle or
+  CakeJS.Pattern is a possibly repeating image that can be used as a strokeStyle or
   fillStyle.
 
     var image = new Image()
     image.src = 'foo.jpg'
-    var pattern = new Pattern(image, 'no-repeat')
-    var rect = new Rectangle(200, 200, {fill: true, fillStyle: pattern})
+    var pattern = new CakeJS.Pattern(image, 'no-repeat')
+    var rect = new CakeJS.Rectangle(200, 200, {fill: true, fillStyle: pattern})
 
   @param image The image object for the pattern. IMG and CANVAS elements, and
                Image objects all work.
@@ -4450,11 +2336,11 @@ CakeJS.Pattern = CakeJS.Klass({
     fill/strokeStyle.
 
     @param ctx Drawing context to compile pattern on.
-    @return Pattern object.
+    @return CakeJS.Pattern object.
     */
   compile : function(ctx) {
     var pat = ctx.createPattern(this.image, this.repeat)
-    Object.extend(pat, Transformable.prototype)
+    Object.extend(pat, CakeJS.Transformable.prototype)
     pat.transformList = this.transformList
     pat.scale = this.scale
     pat.x = this.x
@@ -4478,9 +2364,9 @@ CakeJS.RecordingContext = CakeJS.Klass({
   },
 
   getMockContext : function() {
-    if (!RecordingContext.MockContext) {
+    if (!CakeJS.RecordingContext.MockContext) {
       var c = E.canvas(1,1)
-      var ctx = CanvasSupport.getContext(c, '2d')
+      var ctx = CakeJS.CanvasSupport.getContext(c, '2d')
       var obj = {}
       for (var i in ctx) {
         if (typeof(ctx[i]) == 'function')
@@ -4589,7 +2475,7 @@ CakeJS.RecordingContext.play = function(ctx, commands) {
   SVG parser for simple documents. Converts SVG DOM to CAKE scenegraph.
   Emphasis on graphical images, not on the "HTML-killer" features of SVG.
 
-  var svgNode = SVGParser.parse(
+  var svgNode = CakeJS.SVGParser.parse(
     svgRootElement, filename, containerWidth, containerHeight, fontSize
   )
 
@@ -4600,7 +2486,7 @@ CakeJS.RecordingContext.play = function(ctx, commands) {
     * Simple untransformed text using HTML
     * Nested transforms
     * Transform lists (transform="rotate(30) translate(2,2) scale(4)")
-    * Gradient and pattern transforms
+    * CakeJS.Gradient and pattern transforms
     * Strokes with miter, joins and caps
     * Flat fills and gradient fills, ditto for strokes
     * Parsing simple stylesheets (tag, class or id)
@@ -4666,7 +2552,7 @@ CakeJS.SVGParser = {
         if (xhr.status == 200 || xhr.status == 0) {
           try {
             var svg = xhr.responseXML
-            var svgNode = SVGParser.parse(svg, config)
+            var svgNode = CakeJS.SVGParser.parse(svg, config)
             svgNode.svgRootElement = svg
           } catch(e) {
             if (config.onFailure)
@@ -4706,11 +2592,11 @@ CakeJS.SVGParser = {
 
     @param svgRootElement The root element of the SVG DOM.
     @param config The config hash.
-    @returns The root CanvasNode of the scenegraph created from the SVG document.
-    @type CanvasNode
+    @returns The root CakeJS.CanvasNode of the scenegraph created from the SVG document.
+    @type CakeJS.CanvasNode
     */
   parse : function(svgRootElement, config) {
-    var n = new CanvasNode()
+    var n = new CakeJS.CanvasNode()
     var w = config.width, h = config.height, fs = config.fontSize
     n.innerWidth = w || window.innerWidth
     n.innerHeight = h || window.innerHeight
@@ -4755,7 +2641,7 @@ CakeJS.SVGParser = {
 
   SVGTagMapping : {
     svg : function(c, cn, defs, style) {
-      var p = new Rectangle()
+      var p = new CakeJS.Rectangle()
       p.width = 0
       p.height = 0
       p.doFill = function(){}
@@ -4806,7 +2692,7 @@ CakeJS.SVGParser = {
     },
 
     marker : function(c, cn) {
-      var p = new CanvasNode()
+      var p = new CakeJS.CanvasNode()
       p.draw = function(ctx) {
         if (this.overflow != 'hidden' && this.viewBox) return
         ctx.beginPath()
@@ -4845,7 +2731,7 @@ CakeJS.SVGParser = {
     },
 
     clipPath : function(c,cn) {
-      var p = new CanvasNode()
+      var p = new CakeJS.CanvasNode()
       p.units = c.getAttribute('clipPathUnits')
       return p
     },
@@ -4870,9 +2756,9 @@ CakeJS.SVGParser = {
 
 
     parseAnimateTag : function(c, cn) {
-      var after = SVGParser.SVGTagMapping.parseTime(c.getAttribute('begin'))
-      var dur = SVGParser.SVGTagMapping.parseTime(c.getAttribute('dur'))
-      var end = SVGParser.SVGTagMapping.parseTime(c.getAttribute('end'))
+      var after = CakeJS.SVGParser.SVGTagMapping.parseTime(c.getAttribute('begin'))
+      var dur = CakeJS.SVGParser.SVGTagMapping.parseTime(c.getAttribute('dur'))
+      var end = CakeJS.SVGParser.SVGTagMapping.parseTime(c.getAttribute('end'))
       if (dur == null) dur = end-after
       dur = isNaN(dur) ? 0 : dur
       var variable = c.getAttribute('attributeName')
@@ -4891,7 +2777,7 @@ CakeJS.SVGParser = {
       if (!repeat && dur > 0) {
         var repeatDur = c.getAttribute('repeatDur')
         if (repeatDur == 'indefinite') repeat = true
-        else repeat = SVGParser.SVGTagMapping.parseTime(repeatDur) / dur
+        else repeat = CakeJS.SVGParser.SVGTagMapping.parseTime(repeatDur) / dur
       }
       return {
         after: isNaN(after) ? 0 : after,
@@ -4931,7 +2817,7 @@ CakeJS.SVGParser = {
       var from = this.parseUnit(c.getAttribute('from'), cn, 'x')
       var to = this.parseUnit(c.getAttribute('to'), cn, 'x')
       var by = this.parseUnit(c.getAttribute('by'), cn, 'x')
-      var o = SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
+      var o = CakeJS.SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
       if (c.getAttribute('values')) {
         var self = this
         var vals = c.getAttribute('values')
@@ -5030,7 +2916,7 @@ CakeJS.SVGParser = {
 
     set : function(c, cn) {
       var to = c.getAttribute('to')
-      var o = SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
+      var o = CakeJS.SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
       cn.after(o.after, function() {
         if (o.fill == 'remove') {
           var orig = Object.clone(this[o.variable])
@@ -5056,10 +2942,10 @@ CakeJS.SVGParser = {
         else to = "L" + to
         path = new Path("M" + from + to)
       }
-      var p = new CanvasNode()
+      var p = new CakeJS.CanvasNode()
       p.__motionPath = path
       var rotate = c.getAttribute('rotate')
-      var o = SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
+      var o = CakeJS.SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
       cn.after(o.after, function() {
         if (o.fill == 'remove') {
           var ox = this.x, oy = this.y
@@ -5098,9 +2984,9 @@ CakeJS.SVGParser = {
     animateColor : function(c, cn, defs) {
       var from = c.getAttribute('from')
       var to = c.getAttribute('to')
-      from = SVGParser.SVGMapping.__parseStyle(from, null, defs)
-      to = SVGParser.SVGMapping.__parseStyle(to, null, defs)
-      var o = SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
+      from = CakeJS.SVGParser.SVGMapping.__parseStyle(from, null, defs)
+      to = CakeJS.SVGParser.SVGMapping.__parseStyle(to, null, defs)
+      var o = CakeJS.SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
       cn.after(o.after, function() {
         if (o.fill == 'remove') {
           var orig = Object.clone(this[o.variable])
@@ -5118,7 +3004,7 @@ CakeJS.SVGParser = {
       var from = c.getAttribute('from')
       var to = c.getAttribute('to')
       var by = c.getAttribute('by')
-      var o = SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
+      var o = CakeJS.SVGParser.SVGTagMapping.parseAnimateTag(c, cn)
       if (from) from = from.split(/[ ,]+/).map(parseFloat)
       if (to) to = to.split(/[ ,]+/).map(parseFloat)
       if (by) by = by.split(/[ ,]+/).map(parseFloat)
@@ -5199,7 +3085,7 @@ CakeJS.SVGParser = {
     use : function(c, cn, defs, style) {
       var id = c.getAttribute('xlink:href') ||
                 c.getAttribute('href')
-      var p = new CanvasNode()
+      var p = new CakeJS.CanvasNode()
       if (id) {
         id = id.replace(/^#/,'')
         this.getDef(defs, id, function(obj) {
@@ -5223,7 +3109,7 @@ CakeJS.SVGParser = {
       if (src && src.search(/^[a-z]+:/i) != 0) {
         src = cn.root.filename.split("/").slice(0,-1).join("/") + "/" + src
       }
-      var p = new ImageNode(src ? Object.loadImage(src) : null)
+      var p = new CakeJS.ImageNode(src ? Object.loadImage(src) : null)
       p.fill = 'none'
       p.dX = this.parseUnit(c.getAttribute('x'), cn, 'x') || 0
       p.dY = this.parseUnit(c.getAttribute('y'), cn, 'y') || 0
@@ -5247,7 +3133,7 @@ CakeJS.SVGParser = {
     },
 
     rect : function(c, cn) {
-      var p = new Rectangle(
+      var p = new CakeJS.Rectangle(
         this.parseUnit(c.getAttribute('width'), cn, 'x'),
         this.parseUnit(c.getAttribute('height'), cn, 'y')
       )
@@ -5263,19 +3149,19 @@ CakeJS.SVGParser = {
       var y1 = this.parseUnit(c.getAttribute('y1'), cn, 'y') || 0
       var x2 = this.parseUnit(c.getAttribute('x2'), cn, 'x') || 0
       var y2 = this.parseUnit(c.getAttribute('y2'), cn, 'y') || 0
-      var p = new Line(x1,y1, x2,y2)
+      var p = new CakeJS.Line(x1,y1, x2,y2)
       return p
     },
 
     circle : function(c, cn) {
-      var p = new Circle(this.parseUnit(c.getAttribute('r'), cn) || 0)
+      var p = new CakeJS.Circle(this.parseUnit(c.getAttribute('r'), cn) || 0)
       p.cx = this.parseUnit(c.getAttribute('cx'), cn, 'x') || 0
       p.cy = this.parseUnit(c.getAttribute('cy'), cn, 'y') || 0
       return p
     },
 
     ellipse : function(c, cn) {
-      var p = new Ellipse(
+      var p = new CakeJS.Ellipse(
         this.parseUnit(c.getAttribute('rx'), cn, 'x') || 0,
         this.parseUnit(c.getAttribute('ry'), cn, 'y') || 0
       )
@@ -5295,7 +3181,7 @@ CakeJS.SVGParser = {
         var e = E('div', c.textContent.strip())
         e.style.marginTop = '-1em'
         e.style.whiteSpace = 'nowrap'
-        var p = new ElementNode(e)
+        var p = new CakeJS.ElementNode(e)
         p.xOffset = this.parseUnit(c.getAttribute('x'),cn, 'x') || 0
         p.yOffset = this.parseUnit(c.getAttribute('y'),cn, 'y') || 0
         return p
@@ -5307,14 +3193,14 @@ CakeJS.SVGParser = {
     },
 
     defs : function(c, cn, defs, style) {
-      return new CanvasNode({visible: false})
+      return new CakeJS.CanvasNode({visible: false})
     },
 
     linearGradient : function(c, cn,defs,style) {
-      var g = new Gradient({type:'linear'})
+      var g = new CakeJS.Gradient({type:'linear'})
       g.color = cn.color
       if (c.getAttribute('color')) {
-        SVGParser.SVGMapping.color(g, c.getAttribute('color'), defs, style)
+        CakeJS.SVGParser.SVGMapping.color(g, c.getAttribute('color'), defs, style)
       }
       g.svgNode = c
       var x1 = c.getAttribute('x1')
@@ -5333,10 +3219,10 @@ CakeJS.SVGParser = {
     },
 
     radialGradient : function(c, cn, defs, style) {
-      var g = new Gradient({type:'radial'})
+      var g = new CakeJS.Gradient({type:'radial'})
       g.color = cn.color
       if (c.getAttribute('color')) {
-        SVGParser.SVGMapping.color(g, c.getAttribute('color'), defs, style)
+        CakeJS.SVGParser.SVGMapping.color(g, c.getAttribute('color'), defs, style)
       }
       g.svgNode = c
       var r = c.getAttribute('r')
@@ -5369,7 +3255,7 @@ CakeJS.SVGParser = {
             p = this.SVGTagMapping[c.tagName].call(
                   this, c, canvasNode, defs, style)
           } else {
-            p = new CanvasNode()
+            p = new CakeJS.CanvasNode()
           }
           if (p) {
             p.root = canvasNode.root
@@ -5631,7 +3517,7 @@ CakeJS.SVGParser = {
     RAD_TO_DEG_FACTOR : 180 / Math.PI,
 
     parseUnit : function(v, cn, dir) {
-      return SVGParser.parseUnit(v, cn, dir)
+      return CakeJS.SVGParser.parseUnit(v, cn, dir)
     },
 
     "class" : function(node, v) {
@@ -5639,31 +3525,31 @@ CakeJS.SVGParser = {
     },
 
     marker : function(node, v, defs) {
-      SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
+      CakeJS.SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
         node.marker = g
       })
     },
 
     "marker-start" : function(node, v, defs) {
-      SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
+      CakeJS.SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
         node.markerStart = g
       })
     },
 
     "marker-end" : function(node, v, defs) {
-      SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
+      CakeJS.SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
         node.markerEnd = g
       })
     },
 
     "marker-mid" : function(node, v, defs) {
-      SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
+      CakeJS.SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
         node.markerMid = g
       })
     },
 
     "clip-path" : function(node, v, defs) {
-      SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
+      CakeJS.SVGParser.getDef(defs, v.replace(/^url\(#|\)$/g, ''), function(g) {
         node.clipPath = g
       })
     },
@@ -5864,7 +3750,7 @@ T = function(text) {
   return document.createTextNode(text)
 }
 /**
-  Timeline is an animator that tweens between its frames.
+  CakeJS.Timeline is an animator that tweens between its frames.
 
   When object.time = k.time:
        object.state = k.state
@@ -5945,7 +3831,7 @@ CakeJS.Transformable = CakeJS.Klass({
   /**
     Transforms the context state according to this node's attributes.
 
-    @param ctx Canvas 2D context
+    @param ctx CakeJS.Canvas 2D context
     */
   transform : function(ctx) {
     var atm = this.absoluteMatrix
@@ -5987,11 +3873,11 @@ CakeJS.Transformable = CakeJS.Klass({
   },
 
   distanceTo : function(node) {
-    return Curves.lineLength([this.x, this.y], [node.x, node.y])
+    return CakeJS.Curves.lineLength([this.x, this.y], [node.x, node.y])
   },
 
   angleTo : function(node) {
-    return Curves.lineAngle([this.x, this.y], [node.x, node.y])
+    return CakeJS.Curves.lineAngle([this.x, this.y], [node.x, node.y])
   },
 
 
@@ -6039,9 +3925,9 @@ CakeJS.Transformable = CakeJS.Klass({
 
   __translateMatrix : function(x, y) {
     if (x.length) {
-      CanvasSupport.tTranslate( this.currentMatrix, x[0], x[1] )
+      CakeJS.CanvasSupport.tTranslate( this.currentMatrix, x[0], x[1] )
     } else {
-      CanvasSupport.tTranslate( this.currentMatrix, x, y )
+      CakeJS.CanvasSupport.tTranslate( this.currentMatrix, x, y )
     }
   },
 
@@ -6049,63 +3935,63 @@ CakeJS.Transformable = CakeJS.Klass({
     if (rotation.length) {
       if (rotation[0] % Math.PI*2 == 0) return
       if (rotation[1] || rotation[2]) {
-        CanvasSupport.tTranslate( this.currentMatrix,
+        CakeJS.CanvasSupport.tTranslate( this.currentMatrix,
                                   rotation[1], rotation[2] )
-        CanvasSupport.tRotate( this.currentMatrix, rotation[0] )
-        CanvasSupport.tTranslate( this.currentMatrix,
+        CakeJS.CanvasSupport.tRotate( this.currentMatrix, rotation[0] )
+        CakeJS.CanvasSupport.tTranslate( this.currentMatrix,
                                   -rotation[1], -rotation[2] )
       } else {
-        CanvasSupport.tRotate( this.currentMatrix, rotation[0] )
+        CakeJS.CanvasSupport.tRotate( this.currentMatrix, rotation[0] )
       }
     } else {
       if (rotation % Math.PI*2 == 0) return
-      CanvasSupport.tRotate( this.currentMatrix, rotation )
+      CakeJS.CanvasSupport.tRotate( this.currentMatrix, rotation )
     }
   },
 
   __skewXMatrix : function(skewX) {
     if (skewX.length && skewX[0])
-      CanvasSupport.tSkewX(this.currentMatrix, skewX[0])
+      CakeJS.CanvasSupport.tSkewX(this.currentMatrix, skewX[0])
     else
-      CanvasSupport.tSkewX(this.currentMatrix, skewX)
+      CakeJS.CanvasSupport.tSkewX(this.currentMatrix, skewX)
   },
 
   __skewYMatrix : function(skewY) {
     if (skewY.length && skewY[0])
-      CanvasSupport.tSkewY(this.currentMatrix, skewY[0])
+      CakeJS.CanvasSupport.tSkewY(this.currentMatrix, skewY[0])
     else
-      CanvasSupport.tSkewY(this.currentMatrix, skewY)
+      CakeJS.CanvasSupport.tSkewY(this.currentMatrix, skewY)
   },
 
   __scaleMatrix : function(scale) {
     if (scale.length == 2) {
       if (scale[0] == 1 && scale[1] == 1) return
-      CanvasSupport.tScale(this.currentMatrix,
+      CakeJS.CanvasSupport.tScale(this.currentMatrix,
                            scale[0], scale[1])
     } else if (scale.length == 3) {
       if (scale[0] == 1 || (scale[0].length && (scale[0][0] == 1 && scale[0][1] == 1)))
         return
-      CanvasSupport.tTranslate(this.currentMatrix,
+      CakeJS.CanvasSupport.tTranslate(this.currentMatrix,
                                scale[1], scale[2])
       if (scale[0].length) {
-        CanvasSupport.tScale(this.currentMatrix,
+        CakeJS.CanvasSupport.tScale(this.currentMatrix,
                               scale[0][0], scale[0][1])
       } else {
-        CanvasSupport.tScale( this.currentMatrix, scale[0], scale[0] )
+        CakeJS.CanvasSupport.tScale( this.currentMatrix, scale[0], scale[0] )
       }
-      CanvasSupport.tTranslate(this.currentMatrix,
+      CakeJS.CanvasSupport.tTranslate(this.currentMatrix,
                                -scale[1], -scale[2])
     } else if (scale != 1) {
-      CanvasSupport.tScale( this.currentMatrix, scale, scale )
+      CakeJS.CanvasSupport.tScale( this.currentMatrix, scale, scale )
     }
   },
 
   __matrixMatrix : function(matrix) {
-    CanvasSupport.tMatrixMultiply(this.currentMatrix, matrix)
+    CakeJS.CanvasSupport.tMatrixMultiply(this.currentMatrix, matrix)
   },
 
   __setMatrix : function(ctx, matrix) {
-    CanvasSupport.setTransform(ctx, matrix, this.previousMatrix)
+    CakeJS.CanvasSupport.setTransform(ctx, matrix, this.previousMatrix)
   },
 
   __translate : function(ctx, x,y) {
@@ -6132,16 +4018,16 @@ CakeJS.Transformable = CakeJS.Klass({
 
   __skewX : function(ctx, skewX) {
     if (skewX.length && skewX[0])
-      CanvasSupport.skewX(ctx, skewX[0])
+      CakeJS.CanvasSupport.skewX(ctx, skewX[0])
     else
-      CanvasSupport.skewX(ctx, skewX)
+      CakeJS.CanvasSupport.skewX(ctx, skewX)
   },
 
   __skewY : function(ctx, skewY) {
     if (skewY.length && skewY[0])
-      CanvasSupport.skewY(ctx, skewY[0])
+      CakeJS.CanvasSupport.skewY(ctx, skewY[0])
     else
-      CanvasSupport.skewY(ctx, skewY)
+      CakeJS.CanvasSupport.skewY(ctx, skewY)
   },
 
   __scale : function(ctx, scale) {
@@ -6161,7 +4047,3567 @@ CakeJS.Transformable = CakeJS.Klass({
   },
 
   __matrix : function(ctx, matrix) {
-    CanvasSupport.transform(ctx, matrix)
+    CakeJS.CanvasSupport.transform(ctx, matrix)
+  }
+})
+/**
+  CakeJS.CanvasNode is the base CAKE scenegraph node. All the other scenegraph nodes
+  derive from it. A plain CakeJS.CanvasNode does no drawing, but it can be used for
+  grouping other nodes and setting up the group's drawing state.
+
+  var scene = new CakeJS.CanvasNode({x: 10, y: 10})
+
+  The usual way to use CanvasNodes is to append them to a CakeJS.Canvas object:
+
+    var scene = new CakeJS.CanvasNode()
+    scene.append(new CakeJS.Rectangle(40, 40, {fill: true}))
+    var elem = E.canvas(400, 400)
+    var canvas = new CakeJS.Canvas(elem)
+    canvas.append(scene)
+
+  You can also use CanvasNodes to draw directly to a canvas element:
+
+    var scene = new CakeJS.CanvasNode()
+    scene.append(new CakeJS.Circle(40, {x:200, y:200, stroke: true}))
+    var elem = E.canvas(400, 400)
+    scene.handleDraw(elem.getContext('2d'))
+
+  */
+CakeJS.CanvasNode = CakeJS.Klass(CakeJS.Animatable, CakeJS.Transformable, {
+  OBJECTBOUNDINGBOX : 'objectBoundingBox',
+
+  // whether to draw the node and its childNodes or not
+  visible : true,
+
+  // whether to draw the node (doesn't affect subtree)
+  drawable : true,
+
+  // the CSS display property can be used to affect 'visible'
+  // false     => visible = visible
+  // 'none'    => visible = false
+  // otherwise => visible = true
+  display : null,
+
+  // the CSS visibility property can be used to affect 'drawable'
+  // false     => drawable = drawable
+  // 'hidden'  => drawable = false
+  // otherwise => drawable = true
+  visibility : null,
+
+  // whether this and the subtree from this register mouse hover
+  catchMouse : true,
+
+  // Whether this object registers mouse hover. Only set this to true when you
+  // have a drawable object that can be picked. Otherwise the object requires
+  // a matrix inversion on Firefox 2 and Safari, which is slow.
+  pickable : false,
+
+  // true if this node or one of its descendants is under the mouse
+  // cursor and catchMouse is true
+  underCursor : false,
+
+  // zIndex in relation to sibling nodes (note: not global)
+  zIndex : 0,
+
+  // x translation of the node
+  x : 0,
+
+  // y translation of the node
+  y : 0,
+
+  // scale factor: number for uniform scaling, [x,y] for dimension-wise
+  scale : 1,
+
+  // Rotation of the node, in radians.
+  //
+  // The rotation can also be the array [angle, cx, cy],
+  // where cx and cy define the rotation center.
+  //
+  // The array form is equivalent to
+  // translate(cx, cy); rotate(angle); translate(-cx, -cy);
+  rotation : 0,
+
+  // Transform matrix with which to multiply the current transform matrix.
+  // Applied after all other transformations.
+  matrix : null,
+
+  // Transform matrix with which to replace the current transform matrix.
+  // Applied before any other transformation.
+  absoluteMatrix : null,
+
+  // SVG-like list of transformations to apply.
+  // The different transformations are:
+  // ['translate', [x,y]]
+  // ['rotate', [angle, cx, cy]] - (optional) cx and cy are the rotation center
+  // ['scale', [x,y]]
+  // ['matrix', [m11, m12, m21, m22, dx, dy]]
+  transformList : null,
+
+  // fillStyle for the node and its descendants
+  // Possibilities:
+  //   null // use the previous
+  //   true      // use the previous but do fill
+  //   false     // use the previous but don't do fill
+  //   'none'    // use the previous but don't do fill
+  //
+  //   'white'
+  //   '#fff'
+  //   '#ffffff'
+  //   'rgba(255,255,255, 1.0)'
+  //   [255, 255, 255, 1.0]
+  //   new CakeJS.Gradient(...)
+  //   new CakeJS.Pattern(myImage, 'no-repeat')
+  fill : null,
+
+  // strokeStyle for the node and its descendants
+  // Possibilities:
+  //   null // use the previous
+  //   true      // use the previous but do stroke
+  //   false     // use the previous but don't do stroke
+  //   'none'    // use the previous but don't do stroke
+  //
+  //   'white'
+  //   '#fff'
+  //   '#ffffff'
+  //   'rgba(255,255,255, 1.0)'
+  //   [255, 255, 255, 1.0]
+  //   new CakeJS.Gradient(...)
+  //   new CakeJS.Pattern(myImage, 'no-repeat')
+  stroke : null,
+
+  // stroke line width
+  strokeWidth : null,
+
+  // stroke line cap style ('butt' | 'round' | 'square')
+  lineCap : null,
+
+  // stroke line join style ('bevel' | 'round' | 'miter')
+  lineJoin : null,
+
+  // stroke line miter limit
+  miterLimit : null,
+
+  // set globalAlpha to this value
+  absoluteOpacity : null,
+
+  // multiply globalAlpha by this value
+  opacity : null,
+
+  // fill opacity
+  fillOpacity : null,
+
+  // stroke opacity
+  strokeOpacity : null,
+
+  // set globalCompositeOperation to this value
+  // Possibilities:
+  // ( 'source-over' |
+  //   'copy' |
+  //   'lighter' |
+  //   'darker' |
+  //   'xor' |
+  //   'source-in' |
+  //   'source-out' |
+  //   'destination-over' |
+  //   'destination-atop' |
+  //   'destination-in' |
+  //   'destination-out' )
+  compositeOperation : null,
+
+  // Color for the drop shadow
+  shadowColor : null,
+
+  // Drop shadow blur radius
+  shadowBlur : null,
+
+  // Drop shadow's x-offset
+  shadowOffsetX : null,
+
+  // Drop shadow's y-offset
+  shadowOffsetY : null,
+
+  // HTML5 text API
+  font : null,
+  // horizontal position of the text origin
+  // 'left' | 'center' | 'right' | 'start' | 'end'
+  textAlign : null,
+  // vertical position of the text origin
+  // 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom'
+  textBaseline : null,
+
+  cursor : null,
+
+  changed : true,
+
+  tagName : 'g',
+
+  getNextSibling : function(){
+    if (this.parentNode)
+      return this.parentNode.childNodes[this.parentNode.childNodes.indexOf(this)+1]
+    return null
+  },
+
+  getPreviousSibling : function(){
+    if (this.parentNode)
+      return this.parentNode.childNodes[this.parentNode.childNodes.indexOf(this)-1]
+    return null
+  },
+
+  /**
+    Initialize the CakeJS.CanvasNode and merge an optional config hash.
+    */
+  initialize : function(config) {
+    this.root = this
+    this.currentMatrix = [1,0,0,1,0,0]
+    this.previousMatrix = [1,0,0,1,0,0]
+    this.needMatrixUpdate = true
+    this.childNodes = []
+    this.frameListeners = []
+    this.eventListeners = {}
+    CakeJS.Animatable.initialize.call(this)
+    if (config)
+      Object.extend(this, config)
+  },
+
+  /**
+    Create a clone of the node and its subtree.
+    */
+  clone : function() {
+    var c = Object.clone(this)
+    c.parent = c.root = null
+    for (var i in this) {
+      if (typeof(this[i]) == 'object')
+        c[i] = Object.clone(this[i])
+    }
+    c.parent = c.root = null
+    c.childNodes = []
+    c.setRoot(null)
+    for (var i=0; i<this.childNodes.length; i++) {
+      var ch = this.childNodes[i].clone()
+      c.append(ch)
+    }
+    return c
+  },
+
+  cloneNode : function(){ return this.clone() },
+
+  /**
+    Gets node by id.
+    */
+  getElementById : function(id) {
+    if (this.id == id)
+      return this
+    for (var i=0; i<this.childNodes.length; i++) {
+      var n = this.childNodes[i].getElementById(id)
+      if (n) return n
+    }
+    return null
+  },
+
+  $ : function(id) {
+    return this.getElementById(id)
+  },
+
+  /**
+    Alias for append().
+
+    @param Node[s] to append
+    */
+  appendChild : function() {
+    return this.append.apply(this, arguments)
+  },
+
+  /**
+    Appends arguments as childNodes to the node.
+
+    Adding a child sets child.parent to be the node and calls
+    child.setRoot(node.root)
+
+    @param Node[s] to append
+    */
+  append : function(obj) {
+    var a = $A(arguments)
+    for (var i=0; i<a.length; i++) {
+      if (a[i].parent) a[i].removeSelf()
+      this.childNodes.push(a[i])
+      a[i].parent = a[i].parentNode = this
+      a[i].setRoot(this.root)
+    }
+    this.changed = true
+  },
+
+  /**
+    Removes all childNodes from the node.
+    */
+  removeAllChildren : function() {
+    this.remove.apply(this, this.childNodes)
+  },
+
+  /**
+    Alias for remove().
+
+    @param Node[s] to remove
+    */
+  removeChild : function() {
+    return this.remove.apply(this, arguments)
+  },
+
+  /**
+    Removes arguments from the node's childNodes.
+
+    Removing a child sets its parent to null and calls
+    child.setRoot(null)
+
+    @param Child node[s] to remove
+    */
+  remove : function(obj) {
+    var a = arguments
+    for (var i=0; i<a.length; i++) {
+      this.childNodes.deleteFirst(a[i])
+      delete a[i].parent
+      delete a[i].parentNode
+      a[i].setRoot(null)
+    }
+    this.changed = true
+  },
+
+  /**
+    Calls this.parent.removeChild(this) if this.parent is set.
+    */
+  removeSelf : function() {
+    if (this.parentNode) {
+      this.parentNode.remove(this)
+    }
+  },
+
+  /**
+    Returns true if this node's subtree contains obj. (I.e. obj is this or
+    obj's parent chain includes this.)
+
+    @param obj Node to look for
+    @return True if obj is in this node's subtree, false if it isn't.
+    */
+  contains : function(obj) {
+    while (obj) {
+      if (obj == this) return true
+      obj = obj.parentNode
+    }
+    return false
+  },
+
+  /**
+    Set this.root to the given value and propagate the update to childNodes.
+
+    @param root The new root node
+    @private
+    */
+  setRoot : function(root) {
+    if (!root) root = this
+    this.dispatchEvent({type: 'rootChanged', canvasTarget: this, relatedTarget: root})
+    this.root = root
+    for (var i=0; i<this.childNodes.length; i++)
+      this.childNodes[i].setRoot(root)
+  },
+
+  /**
+    Adds a callback function to be called before drawing each frame.
+
+    @param f Callback function
+    */
+  addFrameListener : function(f) {
+    this.frameListeners.push(f)
+  },
+
+  /**
+    Removes a callback function from update callbacks.
+
+    @param f Callback function
+    */
+  removeFrameListener : function(f) {
+    this.frameListeners.deleteFirst(f)
+  },
+
+  addEventListener : function(type, listener, capture) {
+    if (!this.eventListeners[type])
+      this.eventListeners[type] = {capture:[], bubble:[]}
+    this.eventListeners[type][capture ? 'capture' : 'bubble'].push(listener)
+  },
+
+  /**
+    Synonym for addEventListener.
+  */
+  when : function(type, listener, capture) {
+    this.addEventListener(type, listener, capture || false)
+  },
+
+  removeEventListener : function(type, listener, capture) {
+    if (!this.eventListeners[type]) return
+    this.eventListeners[type][capture ? 'capture' : 'bubble'].deleteFirst(listener)
+    if (this.eventListeners[type].capture.length == 0 &&
+        this.eventListeners[type].bubble.length == 0)
+      delete this.eventListeners[type]
+  },
+
+  dispatchEvent : function(event) {
+    var type = event.type
+    if (!event.canvasTarget) {
+      if (type.search(/^(key|text)/i) == 0) {
+        event.canvasTarget = this.root.focused || this.root.target
+      } else {
+        event.canvasTarget = this.root.target
+      }
+      if (!event.canvasTarget)
+        event.canvasTarget = this
+    }
+    var path = []
+    var obj = event.canvasTarget
+    while (obj && obj != this) {
+      path.push(obj)
+      obj = obj.parent
+    }
+    path.push(this)
+    event.canvasPhase = 'capture'
+    for (var i=path.length-1; i>=0; i--)
+      if (!path[i].handleEvent(event)) return false
+    event.canvasPhase = 'bubble'
+    for (var i=0; i<path.length; i++)
+      if (!path[i].handleEvent(event)) return false
+    return true
+  },
+
+  broadcastEvent : function(event) {
+    var type = event.type
+    event.canvasPhase = 'capture'
+    if (!this.handleEvent(event)) return false
+    for (var i=0; i<this.childNodes.length; i++)
+      if (!this.childNodes[i].broadcastEvent(event)) return false
+    event.canvasPhase = 'bubble'
+    if (!this.handleEvent(event)) return false
+    return true
+  },
+
+  handleEvent : function(event) {
+    var type = event.type
+    var phase = event.canvasPhase
+    if (this.cursor && phase == 'capture')
+      event.cursor = this.cursor
+    var els = this.eventListeners[type]
+    els = els && els[phase]
+    if (els) {
+      for (var i=0; i<els.length; i++) {
+        var rv = els[i].call(this, event)
+        if (rv == false || event.stopped) {
+          if (!event.stopped)
+            event.stopPropagation()
+          event.stopped = true
+          return false
+        }
+      }
+    }
+    return true
+  },
+
+  /**
+    Handle scenegraph update.
+    Called with current time before drawing each frame.
+
+    This method should be touched only if you know what you're doing.
+    If you need your own update handler, either add a frame listener or
+    overwrite {@link CakeJS.CanvasNode#update}.
+
+    @param time Current animation time
+    @param timeDelta Time since last frame in milliseconds
+    */
+  handleUpdate : function(time, timeDelta) {
+    this.update(time, timeDelta)
+    this.willBeDrawn = (!this.parent || this.parent.willBeDrawn) && (this.display ? this.display != 'none' : this.visible)
+    for(var i=0; i<this.childNodes.length; i++)
+      this.childNodes[i].handleUpdate(time, timeDelta)
+    // TODO propagate dirty area bbox up the scene graph
+    if (this.parent && this.changed) {
+      this.parent.changed = this.changed
+      this.changed = false
+    }
+    this.needMatrixUpdate = true
+  },
+
+  /**
+    Update this node. Calls all frame listener callbacks in the order they
+    were added.
+
+    Overwrite this with your own method if you want to do things differently.
+
+    @param time Current animation time
+    @param timeDelta Time since last frame in milliseconds
+    */
+  update : function(time, timeDelta) {
+    // need to operate on a copy, otherwise bad stuff happens
+    var fl = this.frameListeners.slice(0)
+    for(var i=0; i<fl.length; i++) {
+      if (this.frameListeners.includes(fl[i]))
+        fl[i].apply(this, arguments)
+    }
+  },
+
+  /**
+    Tests if this node or its subtree is under the mouse cursor and
+    sets this.underCursor accordingly.
+
+    If this node (and not one of its childNodes) is under the mouse cursor
+    this.root.target is set to this. This way, the topmost (== drawn last)
+    node under the mouse cursor is the root target.
+
+    To see whether a subtree node is the current target:
+
+    if (this.underCursor && this.contains(this.root.target)) {
+      // we are the target, let's roll
+    }
+
+    This method should be touched only if you know what you're doing.
+    Overwrite {@link CakeJS.CanvasNode#drawPickingPath} to change the way the node's
+    picking path is created.
+
+    Called after handleUpdate, but before handleDraw.
+
+    @param ctx CakeJS.Canvas 2D context
+    */
+  handlePick : function(ctx) {
+    // CSS display & visibility
+    if (this.display)
+      this.visible = (this.display != 'none')
+    if (this.visibility)
+      this.drawable = (this.visibility != 'hidden')
+    this.underCursor = false
+    if (this.visible && this.catchMouse && this.root.absoluteMouseX != null) {
+      ctx.save()
+      this.transform(ctx, true)
+      if (this.pickable && this.drawable) {
+        if (ctx.isPointInPath) {
+          ctx.beginPath()
+          if (this.drawPickingPath)
+            this.drawPickingPath(ctx)
+        }
+        this.underCursor = CakeJS.CanvasSupport.isPointInPath(
+                              this.drawPickingPath ? ctx : false,
+                              this.root.mouseX,
+                              this.root.mouseY,
+                              this.currentMatrix,
+                              this)
+        if (this.underCursor)
+          this.root.target = this
+      } else {
+        this.underCursor = false
+      }
+      var c = this.__getChildrenCopy()
+      this.__zSort(c)
+      for(var i=0; i<c.length; i++) {
+        c[i].handlePick(ctx)
+        if (!this.underCursor)
+          this.underCursor = c[i].underCursor
+      }
+      ctx.restore()
+    } else {
+      var c = this.__getChildrenCopy()
+      while (c.length > 0) {
+        var c0 = c.pop()
+        if (c0.underCursor) {
+          c0.underCursor = false
+          Array.prototype.push.apply(c, c0.childNodes)
+        }
+      }
+    }
+  },
+
+  __zSort : function(c) {
+    c.stableSort(function(c1,c2) { return c1.zIndex - c2.zIndex; });
+  },
+
+  __getChildrenCopy : function() {
+    if (this.__childNodesCopy) {
+      while (this.__childNodesCopy.length > this.childNodes.length)
+        this.__childNodesCopy.pop()
+      for (var i=0; i<this.childNodes.length; i++)
+        this.__childNodesCopy[i] = this.childNodes[i]
+    } else {
+      this.__childNodesCopy = this.childNodes.slice(0)
+    }
+    return this.__childNodesCopy
+  },
+
+  /**
+    Returns true if the point x,y is inside the path of a drawable node.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
+    transform on the rectangle.
+
+    Leave isPointInPath to false to avoid unnecessary matrix inversions for
+    non-drawables.
+
+    @param x X-coordinate of the point.
+    @param y Y-coordinate of the point.
+    @return Whether the point is inside the path of this node.
+    @type boolean
+    */
+  isPointInPath : false,
+
+  /**
+    Handles transforming and drawing the node and its childNodes
+    on each frame.
+
+    Pushes context state, applies state transforms and draws the node.
+    Then sorts the node's childNodes by zIndex, smallest first, and
+    calls their handleDraws in that order. Finally, pops the context state.
+
+    Called after handleUpdate and handlePick.
+
+    This method should be touched only if you know what you're doing.
+    Overwrite {@link CakeJS.CanvasNode#draw} when you need to draw things.
+
+    @param ctx CakeJS.Canvas 2D context
+    */
+  handleDraw : function(ctx) {
+    // CSS display & visibility
+    if (this.display)
+      this.visible = (this.display != 'none')
+    if (this.visibility)
+      this.drawable = (this.visibility != 'hidden')
+    if (!this.visible) return
+    ctx.save()
+    var pff = ctx.fontFamily
+    var pfs = ctx.fontSize
+    var pfo = ctx.fillOn
+    var pso = ctx.strokeOn
+    if (this.fontFamily)
+      ctx.fontFamily = this.fontFamily
+    if (this.fontSize)
+      ctx.fontSize = this.fontSize
+    this.transform(ctx)
+    if (this.clipPath) {
+      ctx.beginPath()
+      if (this.clipPath.units == this.OBJECTBOUNDINGBOX) {
+        var bb = this.getSubtreeBoundingBox(true)
+        ctx.save()
+        ctx.translate(bb[0], bb[1])
+        ctx.scale(bb[2], bb[3])
+        this.clipPath.createSubtreePath(ctx, true)
+        ctx.restore()
+        ctx.clip()
+      } else {
+        this.clipPath.createSubtreePath(ctx, true)
+        ctx.clip()
+      }
+    }
+    if (this.drawable && this.draw)
+      this.draw(ctx)
+    var c = this.__getChildrenCopy()
+    this.__zSort(c);
+    for(var i=0; i<c.length; i++) {
+      c[i].handleDraw(ctx)
+    }
+    ctx.fontFamily = pff
+    ctx.fontSize = pfs
+    ctx.fillOn = pfo
+    ctx.strokeOn = pso
+    ctx.restore()
+  },
+
+  /**
+    Transforms the context state according to this node's attributes.
+
+    @param ctx CakeJS.Canvas 2D context
+    @param onlyTransform If set to true, only do matrix transforms.
+    */
+  transform : function(ctx, onlyTransform) {
+    CakeJS.Transformable.prototype.transform.call(this, ctx)
+
+    if (onlyTransform) return
+
+    // stroke / fill modifiers
+    if (this.fill != null) {
+      if (!this.fill || this.fill == 'none') {
+        ctx.fillOn = false
+      } else {
+        ctx.fillOn = true
+        if (this.fill != true) {
+          var fillStyle = CakeJS.Colors.parseColorStyle(this.fill, ctx)
+          ctx.setFillStyle( fillStyle )
+        }
+      }
+    }
+    if (this.stroke != null) {
+      if (!this.stroke || this.stroke == 'none') {
+        ctx.strokeOn = false
+      } else {
+        ctx.strokeOn = true
+        if (this.stroke != true)
+          ctx.setStrokeStyle( CakeJS.Colors.parseColorStyle(this.stroke, ctx) )
+      }
+    }
+    if (this.strokeWidth != null)
+      ctx.setLineWidth( this.strokeWidth )
+    if (this.lineCap != null)
+      ctx.setLineCap( this.lineCap )
+    if (this.lineJoin != null)
+      ctx.setLineJoin( this.lineJoin )
+    if (this.miterLimit != null)
+      ctx.setMiterLimit( this.miterLimit )
+
+    // compositing modifiers
+    if (this.absoluteOpacity != null)
+      ctx.setGlobalAlpha( this.absoluteOpacity )
+    if (this.opacity != null)
+      ctx.setGlobalAlpha( ctx.globalAlpha * this.opacity )
+    if (this.compositeOperation != null)
+      ctx.setGlobalCompositeOperation( this.compositeOperation )
+
+    // shadow modifiers
+    if (this.shadowColor != null)
+      ctx.setShadowColor( CakeJS.Colors.parseColorStyle(this.shadowColor, ctx) )
+    if (this.shadowBlur != null)
+      ctx.setShadowBlur( this.shadowBlur )
+    if (this.shadowOffsetX != null)
+      ctx.setShadowOffsetX( this.shadowOffsetX )
+    if (this.shadowOffsetY != null)
+      ctx.setShadowOffsetY( this.shadowOffsetY )
+
+    // text modifiers
+    if (this.textAlign != null)
+      ctx.setTextAlign( this.textAlign )
+    if (this.textBaseline != null)
+      ctx.setTextBaseline( this.textBaseline )
+    if (this.font != null)
+      ctx.setFont( this.font )
+  },
+
+  /**
+    Draws the picking path for the node for testing if the mouse cursor
+    is inside the node.
+
+    False by default, overwrite if you need special behaviour.
+
+    @param ctx CakeJS.Canvas 2D context
+    */
+  drawPickingPath : false,
+
+  /**
+    Draws the node.
+
+    False by default, overwrite to actually draw something.
+
+    @param ctx CakeJS.Canvas 2D context
+    */
+  draw : false,
+
+  createSubtreePath : function(ctx, skipTransform) {
+    ctx.save()
+    if (!skipTransform) this.transform(ctx, true)
+    for (var i=0; i<this.childNodes.length; i++)
+      this.childNodes[i].createSubtreePath(ctx)
+    ctx.restore()
+  },
+
+  getSubtreeBoundingBox : function(identity) {
+    if (identity) {
+      var p = this.parent
+      this.parent = null
+      this.needMatrixUpdate = true
+    }
+    var bb = this.getAxisAlignedBoundingBox()
+    for (var i=0; i<this.childNodes.length; i++) {
+      var cbb = this.childNodes[i].getSubtreeBoundingBox()
+      if (!bb) {
+        bb = cbb
+      } else if (cbb) {
+        this.mergeBoundingBoxes(bb, cbb)
+      }
+    }
+    if (identity) {
+      this.parent = p
+      this.needMatrixUpdate = true
+    }
+    return bb
+  },
+
+  mergeBoundingBoxes : function(bb, bb2) {
+    if (bb[0] > bb2[0]) bb[0] = bb2[0]
+    if (bb[1] > bb2[1]) bb[1] = bb2[1]
+    if (bb[2]+bb[0] < bb2[2]+bb2[0]) bb[2] = bb2[2]+bb2[0]-bb[0]
+    if (bb[3]+bb[1] < bb2[3]+bb2[1]) bb[3] = bb2[3]+bb2[1]-bb[1]
+  },
+
+  getAxisAlignedBoundingBox : function() {
+    this.transform(null, true)
+    if (!this.getBoundingBox) return null
+    var bbox = this.getBoundingBox()
+    var xy1 = CakeJS.CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
+      bbox[0], bbox[1])
+    var xy2 = CakeJS.CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
+      bbox[0]+bbox[2], bbox[1]+bbox[3])
+    var xy3 = CakeJS.CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
+      bbox[0], bbox[1]+bbox[3])
+    var xy4 = CakeJS.CanvasSupport.tMatrixMultiplyPoint(this.currentMatrix,
+      bbox[0]+bbox[2], bbox[1])
+    var x1 = Math.min(xy1[0], xy2[0], xy3[0], xy4[0])
+    var x2 = Math.max(xy1[0], xy2[0], xy3[0], xy4[0])
+    var y1 = Math.min(xy1[1], xy2[1], xy3[1], xy4[1])
+    var y2 = Math.max(xy1[1], xy2[1], xy3[1], xy4[1])
+    return [x1, y1, x2-x1, y2-y1]
+  },
+
+  makeDraggable : function() {
+    this.addEventListener('dragstart', function(ev) {
+      this.dragStartPosition = {x: this.x, y: this.y};
+      ev.stopPropagation();
+      ev.preventDefault();
+      return false;
+    }, false);
+    this.addEventListener('drag', function(ev) {
+      this.x = this.dragStartPosition.x + this.root.dragX / this.parent.currentMatrix[0];
+      this.y = this.dragStartPosition.y + this.root.dragY / this.parent.currentMatrix[3];
+      ev.stopPropagation();
+      ev.preventDefault();
+      return false;
+    }, false);
+  }
+})
+/**
+  CakeJS.ElementNode is a CakeJS.CanvasNode that has an HTML element as its content.
+
+  The content is added to an absolutely positioned HTML element, which is added
+  to the root node's canvases parentNode. The content element follows the
+  current transformation matrix.
+
+  The opacity of the element is set to the globalAlpha of the drawing context
+  unless #noAlpha is true.
+
+  The font-size of the element is set to the current y-scale unless #noScaling
+  is true.
+
+  Use CakeJS.ElementNode when you need accessible web content in your animations.
+
+    var e = new CakeJS.ElementNode(
+      E('h1', 'HERZLICH WILLKOMMEN IM BAHNHOF'),
+      {
+        x : 40,
+        y : 30
+      }
+    )
+    e.addFrameListener(function(t) {
+      this.scale = 1 + 0.5*Math.cos(t/1000)
+    })
+
+  @param content An HTML element or string of HTML to use as the content.
+  @param config Optional config has.
+  */
+CakeJS.ElementNode = CakeJS.Klass(CakeJS.CanvasNode, {
+  noScaling : false,
+  noAlpha : false,
+  inherit : 'inherit',
+  align: null, // left | center | right
+  valign: null, // top | center | bottom
+  xOffset: 0,
+  yOffset: 0,
+
+  initialize : function(content, config) {
+    CakeJS.CanvasNode.initialize.call(this, config)
+    this.content = content
+    this.element = E('div', content)
+    this.element.style.MozTransformOrigin =
+    this.element.style.webkitTransformOrigin = '0 0'
+    this.element.style.position = 'absolute'
+  },
+
+  clone : function() {
+    var c = CakeJS.CanvasNode.prototype.clone.call(this)
+    if (this.content && this.content.cloneNode)
+      c.content = this.content.cloneNode(true)
+    c.element = E('div', c.content)
+    c.element.style.position = 'absolute'
+    c.element.style.MozTransformOrigin =
+    c.element.style.webkitTransformOrigin = '0 0'
+    return c
+  },
+
+  setRoot : function(root) {
+    CakeJS.CanvasNode.setRoot.call(this, root)
+    if (this.element && this.element.parentNode && this.element.parentNode.removeChild)
+      this.element.parentNode.removeChild(this.element)
+  },
+
+  handleUpdate : function(t, dt) {
+    CakeJS.CanvasNode.handleUpdate.call(this, t, dt)
+    if (!this.willBeDrawn || !this.visible || this.display == 'none' || this.visibility == 'hidden' || !this.drawable) {
+      if (this.element.style.display != 'none')
+        this.element.style.display = 'none'
+    } else if (this.element.style.display == 'none') {
+      this.element.style.display = 'block'
+    }
+  },
+
+  addEventListener : function(event, callback, capture) {
+    var th = this
+    var ccallback = function() { callback.apply(th, arguments) }
+    return this.element.addEventListener(event, ccallback, capture||false)
+  },
+
+  removeEventListener : function(event, callback, capture) {
+    var th = this
+    var ccallback = function() { callback.apply(th, arguments) }
+    return this.element.removeEventListener(event, ccallback, capture||false)
+  },
+
+  draw : function(ctx) {
+    if (this.cursor && this.element.style.cursor != this.cursor)
+      this.element.style.cursor = this.cursor
+    if (this.element.style.zIndex != this.root.elementNodeZIndexCounter)
+      this.element.style.zIndex = this.root.elementNodeZIndexCounter
+    this.root.elementNodeZIndexCounter++
+    var baseTransform = this.currentMatrix
+    xo = this.xOffset
+    yo = this.yOffset
+    if (this.fillBoundingBox && this.parent && this.parent.getBoundingBox) {
+      var bb = this.parent.getBoundingBox()
+      xo += bb[0]
+      yo += bb[1]
+    }
+    var xy = CakeJS.CanvasSupport.tMatrixMultiplyPoint(baseTransform.slice(0,4).concat([0,0]),
+      xo, yo)
+    var x = this.currentMatrix[4] + xy[0]
+    var y = this.currentMatrix[5] + xy[1]
+    var a = this.currentMatrix[2]
+    var b = this.currentMatrix[3]
+    var c = this.currentMatrix[0]
+    var d = this.currentMatrix[1]
+    var ys = Math.sqrt(a*a + b*b)
+    var xs = Math.sqrt(c*c + d*d)
+    if (ctx.fontFamily != null)
+      this.element.style.fontFamily = ctx.fontFamily
+
+    var wkt = CakeJS.CanvasSupport.isCSSTransformSupported()
+    if (wkt && !this.noScaling) {
+      this.element.style.MozTransform =
+      this.element.style.webkitTransform = 'matrix('+baseTransform.join(",")+')'
+    } else {
+      this.element.style.MozTransform =
+      this.element.style.webkitTransform = ''
+    }
+    if (ctx.fontSize != null) {
+      if (this.noScaling || wkt) {
+        this.element.style.fontSize = ctx.fontSize + 'px'
+      } else {
+        this.element.style.fontSize = ctx.fontSize * ys + 'px'
+      }
+    } else {
+      if (this.noScaling || wkt) {
+        this.element.style.fontSize = 'inherit'
+      } else {
+        this.element.style.fontSize = 100 * ys + '%'
+      }
+    }
+    if (this.noAlpha)
+      this.element.style.opacity = 1
+    else
+      this.element.style.opacity = ctx.globalAlpha
+    if (!this.element.parentNode && this.root.canvas.parentNode) {
+      this.element.style.visibility = 'hidden'
+      this.root.canvas.parentNode.appendChild(this.element)
+      var hidden = true
+    }
+    var fs = this.color || this.fill
+    if (this.parent) {
+      if (!fs || !fs.length)
+        fs = this.parent.color
+      if (!fs || !fs.length)
+        fs = this.parent.fill
+    }
+    if (!fs || !fs.length)
+      fs = ctx.fillStyle
+    if (typeof(fs) == 'string') {
+      if (fs.search(/^rgba\(/) != -1) {
+        this.element.style.color = 'rgb(' +
+          fs.match(/\d+/g).slice(0,3).join(",") +
+          ')'
+      } else {
+        this.element.style.color = fs
+      }
+    } else if (fs.length) {
+      this.element.style.color = 'rgb(' + fs.slice(0,3).map(Math.floor).join(",") + ')'
+    }
+    var dx = 0, dy = 0
+    if (bb) {
+      this.element.style.width = Math.floor(xs * bb[2]) + 'px'
+      this.element.style.height = Math.floor(ys * bb[3]) + 'px'
+      this.eWidth = xs
+      this.eHeight = ys
+    } else {
+      this.element.style.width = ''
+      this.element.style.height = ''
+      var align = this.align || this.textAnchor
+      var origin = [0,0]
+      if (align == 'center' || align == 'middle') {
+        dx = -this.element.offsetWidth / 2
+        origin[0] = '50%'
+      } else if (align == 'right') {
+        dx = -this.element.offsetWidth
+        origin[0] = '100%'
+      }
+      var valign = this.valign
+      if (valign == 'center' || valign == 'middle') {
+        dy = -this.element.offsetHeight / 2
+        origin[1] = '50%'
+      } else if (valign == 'bottom') {
+        dy = -this.element.offsetHeight
+        origin[1] = '100%'
+      }
+      this.element.style.webkitTransformOrigin =
+      this.element.style.MozTransformOrigin = origin.join(" ")
+      this.eWidth = this.element.offsetWidth / xs
+      this.eHeight = this.element.offsetHeight / ys
+    }
+    if (wkt && !this.noScaling) {
+      this.element.style.left = Math.floor(dx) + 'px'
+      this.element.style.top = Math.floor(dy) + 'px'
+    } else {
+      this.element.style.left = Math.floor(x+dx) + 'px'
+      this.element.style.top = Math.floor(y+dy) + 'px'
+    }
+    if (hidden)
+      this.element.style.visibility = 'visible'
+  }
+})
+/**
+  CakeJS.Canvas is the canvas manager class.
+  It takes care of updating and drawing its childNodes on a canvas element.
+
+  An example with a rotating rectangle:
+
+    var c = E.canvas(500, 500)
+    var canvas = new CakeJS.Canvas(c)
+    var rect = new CakeJS.Rectangle(100, 100)
+    rect.x = 250
+    rect.y = 250
+    rect.fill = true
+    rect.fillStyle = 'green'
+    rect.addFrameListener(function(t) {
+      this.rotation = ((t / 3000) % 1) * Math.PI * 2
+    })
+    canvas.append(rect)
+    document.body.appendChild(c)
+
+
+  To use the canvas as a manually updated image:
+
+    var canvas = new CakeJS.Canvas(E.canvas(200,40), {
+      isPlaying : false,
+      redrawOnlyWhenChanged : true
+    })
+    var c = new CakeJS.Circle(20)
+    c.x = 100
+    c.y = 20
+    c.fill = true
+    c.fillStyle = 'red'
+    c.addFrameListener(function(t) {
+      if (this.root.absoluteMouseX != null) {
+        this.x = this.root.mouseX // relative to canvas surface
+        this.root.changed = true
+      }
+    })
+    canvas.append(c)
+
+
+  Or by using raw onFrame-calls:
+
+    var canvas = new CakeJS.Canvas(E.canvas(200,40), {
+      isPlaying : false,
+      fill : true,
+      fillStyle : 'white'
+    })
+    var c = new CakeJS.Circle(20)
+    c.x = 100
+    c.y = 20
+    c.fill = true
+    c.fillStyle = 'red'
+    canvas.append(c)
+    canvas.onFrame()
+
+
+  Which is also the recommended way to use a canvas inside another canvas:
+
+    var canvas = new CakeJS.Canvas(E.canvas(200,40), {
+      isPlaying : false
+    })
+    var c = new CakeJS.Circle(20, {
+      x: 100, y: 20,
+      fill: true, fillStyle: 'red'
+    })
+    canvas.append(c)
+
+    var topCanvas = new CakeJS.Canvas(E.canvas(500, 500))
+    var canvasImage = new CakeJS.ImageNode(canvas.canvas, {x: 250, y: 250})
+    topCanvas.append(canvasImage)
+    canvasImage.addFrameListener(function(t) {
+      this.rotation = (t / 3000 % 1) * Math.PI * 2
+      canvas.onFrame(t)
+    })
+
+  */
+CakeJS.Canvas = CakeJS.Klass(CakeJS.CanvasNode, {
+
+  clear : true,
+  frameLoop : false,
+  recording : false,
+  opacity : 1,
+  frame : 0,
+  elapsed : 0,
+  frameDuration : 30,
+  speed : 1.0,
+  time : 0,
+  fps : 0,
+  currentRealFps : 0,
+  currentFps : 0,
+  fpsFrames : 30,
+  startTime : 0,
+  realFps : 0,
+  fixedTimestep : false,
+  playOnlyWhenFocused : true,
+  isPlaying : true,
+  redrawOnlyWhenChanged : false,
+  changed : true,
+  drawBoundingBoxes : false,
+  cursor : 'default',
+
+  mouseDown : false,
+  mouseEvents : [],
+
+  // absolute pixel coordinates from canvas top-left
+  absoluteMouseX : null,
+  absoluteMouseY : null,
+
+  /*
+    Coordinates relative to the canvas's surface scale.
+    Example:
+      canvas.width
+      #=> 100
+      canvas.style.width
+      #=> '100px'
+      canvas.absoluteMouseX
+      #=> 50
+      canvas.mouseX
+      #=> 50
+
+      canvas.style.width = '200px'
+      canvas.width
+      #=> 100
+      canvas.absoluteMouseX
+      #=> 100
+      canvas.mouseX
+      #=> 50
+  */
+  mouseX : null,
+  mouseY : null,
+
+  elementNodeZIndexCounter : 0,
+
+  initialize : function(canvas, config) {
+    if (arguments.length > 2) {
+      var container = arguments[0]
+      var w = arguments[1]
+      var h = arguments[2]
+      var config = arguments[3]
+      var canvas = E.canvas(w,h)
+      var canvasContainer = E('div', canvas, {style:
+        {overflow:'hidden', width:w+'px', height:h+'px', position:'relative'}
+      })
+      this.canvasContainer = canvasContainer
+      if (container)
+        container.appendChild(canvasContainer)
+    }
+    CakeJS.CanvasNode.initialize.call(this, config)
+    this.mouseEventStack = []
+    this.canvas = canvas
+    canvas.canvas = this
+    this.width = this.canvas.width
+    this.height = this.canvas.height
+    var th = this
+    this.frameHandler = function() { th.onFrame() }
+    this.canvas.addEventListener('DOMNodeInserted', function(ev) {
+      if (ev.target == this)
+        th.addEventListeners()
+    }, false)
+    this.canvas.addEventListener('DOMNodeRemoved', function(ev) {
+      if (ev.target == this)
+        th.removeEventListeners()
+    }, false)
+    if (this.canvas.parentNode) this.addEventListeners()
+    this.startTime = new Date().getTime()
+    if (this.isPlaying)
+      this.play()
+  },
+
+  // FIXME
+  removeEventListeners : function() {
+  },
+
+  addEventListeners : function() {
+    var th = this
+    this.canvas.parentNode.addMouseEvent = function(e){
+      var xy = CakeJS.Mouse.getRelativeCoords(this, e)
+      th.absoluteMouseX = xy.x
+      th.absoluteMouseY = xy.y
+      var style = document.defaultView.getComputedStyle(th.canvas,"")
+      var w = parseFloat(style.getPropertyValue('width'))
+      var h = parseFloat(style.getPropertyValue('height'))
+      th.mouseX = th.absoluteMouseX * (w / th.canvas.width)
+      th.mouseY = th.absoluteMouseY * (h / th.canvas.height)
+      th.addMouseEvent(th.mouseX, th.mouseY, th.mouseDown)
+    }
+    this.canvas.parentNode.contains = this.contains
+
+    this.canvas.parentNode.addEventListener('mousedown', function(e) {
+      th.mouseDown = true
+      if (th.keyTarget != th.target) {
+        if (th.keyTarget)
+          th.dispatchEvent({type: 'blur', canvasTarget: th.keyTarget})
+        th.keyTarget = th.target
+        if (th.keyTarget)
+          th.dispatchEvent({type: 'focus', canvasTarget: th.keyTarget})
+      }
+      this.addMouseEvent(e)
+    }, true)
+
+    this.canvas.parentNode.addEventListener('mouseup', function(e) {
+      this.addMouseEvent(e)
+      th.mouseDown = false
+    }, true)
+
+    this.canvas.parentNode.addEventListener('mousemove', function(e) {
+      this.addMouseEvent(e)
+      if (th.prevClientX == null) {
+        th.prevClientX = e.clientX
+        th.prevClientY = e.clientY
+      }
+      if (th.dragTarget) {
+        var nev = document.createEvent('MouseEvents')
+        nev.initMouseEvent('drag', true, true, window, e.detail,
+          e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
+          e.shiftKey, e.metaKey, e.button, e.relatedTarget)
+        nev.canvasTarget = th.dragTarget
+        nev.dx = e.clientX - th.prevClientX
+        nev.dy = e.clientY - th.prevClientY
+        th.dragX += nev.dx
+        th.dragY += nev.dy
+        th.dispatchEvent(nev)
+      }
+      if (!th.mouseDown) {
+        if (th.dragTarget) {
+          var nev = document.createEvent('MouseEvents')
+          nev.initMouseEvent('dragend', true, true, window, e.detail,
+            e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
+            e.shiftKey, e.metaKey, e.button, e.relatedTarget)
+          nev.canvasTarget = th.dragTarget
+          th.dispatchEvent(nev)
+          th.dragX = th.dragY = 0
+          th.dragTarget = false
+        }
+      } else if (!th.dragTarget && th.target) {
+        th.dragTarget = th.target
+        var nev = document.createEvent('MouseEvents')
+        nev.initMouseEvent('dragstart', true, true, window, e.detail,
+          e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
+          e.shiftKey, e.metaKey, e.button, e.relatedTarget)
+        nev.canvasTarget = th.dragTarget
+        th.dragStartX = e.clientX
+        th.dragStartY = e.clientY
+        th.dragX = th.dragY = 0
+        th.dispatchEvent(nev)
+      }
+      th.prevClientX = e.clientX
+      th.prevClientY = e.clientY
+    }, true)
+
+    this.canvas.parentNode.addEventListener('mouseout', function(e) {
+      if (!CakeJS.CanvasNode.contains.call(this, e.relatedTarget))
+        th.absoluteMouseX = th.absoluteMouseY = th.mouseX = th.mouseY = null
+    }, true)
+
+    var dispatch = this.dispatchEvent.bind(this)
+    var types = [
+      'mousemove', 'mouseover', 'mouseout',
+      'click', 'dblclick',
+      'mousedown', 'mouseup',
+      'keypress', 'keydown', 'keyup',
+      'DOMMouseScroll', 'mousewheel', 'mousemultiwheel', 'textInput',
+      'focus', 'blur'
+    ]
+    for (var i=0; i<types.length; i++) {
+      this.canvas.parentNode.addEventListener(types[i], dispatch, false)
+    }
+    this.keys = {}
+
+    this.windowEventListeners = {
+
+      keydown : function(ev) {
+        if (th.keyTarget) {
+          th.updateKeys(ev)
+          ev.canvasTarget = th.keyTarget
+          th.dispatchEvent(ev)
+        }
+      },
+
+      keyup : function(ev) {
+        if (th.keyTarget) {
+          th.updateKeys(ev)
+          ev.canvasTarget = th.keyTarget
+          th.dispatchEvent(ev)
+        }
+      },
+
+      // do we even want to have this?
+      keypress : function(ev) {
+        if (th.keyTarget) {
+          ev.canvasTarget = th.keyTarget
+          th.dispatchEvent(ev)
+        }
+      },
+
+      blur : function(ev) {
+        th.absoluteMouseX = th.absoluteMouseY = null
+        if (th.playOnlyWhenFocused && th.isPlaying) {
+          th.stop()
+          th.__blurStop = true
+        }
+      },
+
+      focus : function(ev) {
+        if (th.__blurStop && !th.isPlaying) th.play()
+      },
+
+      mouseup : function(e) {
+        th.mouseDown = false
+        if (th.dragTarget) {
+          // TODO
+          // find the object that receives the drag (i.e. drop target)
+          var nev = document.createEvent('MouseEvents')
+          nev.initMouseEvent('dragend', true, true, window, e.detail,
+            e.screenX, e.screenY, e.clientX, e.clientY, e.ctrlKey, e.altKey,
+            e.shiftKey, e.metaKey, e.button, e.relatedTarget)
+          nev.canvasTarget = th.dragTarget
+          th.dispatchEvent(nev)
+          th.dragTarget = false
+        }
+        if (!th.canvas.parentNode.contains(e.target)) {
+          var rv = th.dispatchEvent(e)
+          if (th.keyTarget) {
+            th.dispatchEvent({type: 'blur', canvasTarget: th.keyTarget})
+            th.keyTarget = null
+          }
+          return rv
+        }
+      },
+
+      mousemove : function(ev) {
+        if (th.__blurStop && !th.isPlaying) th.play()
+        if (!th.canvas.parentNode.contains(ev.target) && th.mouseDown)
+          return th.dispatchEvent(ev)
+      }
+
+    }
+
+    this.canvas.parentNode.addEventListener('DOMNodeRemoved', function(ev) {
+      if (ev.target == this)
+        th.removeWindowEventListeners()
+    }, false)
+    this.canvas.parentNode.addEventListener('DOMNodeInserted', function(ev) {
+      if (ev.target == this)
+        th.addWindowEventListeners()
+    }, false)
+    if (this.canvas.parentNode.parentNode) this.addWindowEventListeners()
+  },
+
+  updateKeys : function(ev) {
+    this.keys.shift = ev.shiftKey
+    this.keys.ctrl = ev.ctrlKey
+    this.keys.alt = ev.altKey
+    this.keys.meta = ev.metaKey
+    var state = (ev.type == 'keydown')
+    switch (ev.keyCode) {
+      case 37: this.keys.left = state; break
+      case 38: this.keys.up = state; break
+      case 39: this.keys.right = state; break
+      case 40: this.keys.down = state; break
+      case 32: this.keys.space = state; break
+      case 13: this.keys.enter = state; break
+      case 9: this.keys.tab = state; break
+      case 8: this.keys.backspace = state; break
+      case 16: this.keys.shift = state; break
+      case 17: this.keys.ctrl = state; break
+      case 18: this.keys.alt = state; break
+    }
+    this.keys[ev.keyCode] = state
+  },
+
+  addWindowEventListeners : function() {
+    for (var i in this.windowEventListeners)
+      window.addEventListener(i, this.windowEventListeners[i], false)
+  },
+
+  removeWindowEventListeners : function() {
+    for (var i in this.windowEventListeners)
+      window.removeEventListener(i, this.windowEventListeners[i], false)
+  },
+
+  addMouseEvent : function(x,y,mouseDown) {
+    var a = this.allocMouseEvent()
+    a[0] = x
+    a[1] = y
+    a[2] = mouseDown
+    this.mouseEvents.push(a)
+  },
+
+  allocMouseEvent : function() {
+    if (this.mouseEventStack.length > 0) {
+      return this.mouseEventStack.pop()
+    } else {
+      return [null, null, null]
+    }
+  },
+
+  freeMouseEvent : function(ev) {
+    this.mouseEventStack.push(ev)
+    if (this.mouseEventStack.length > 100)
+      this.mouseEventStack.splice(0,this.mouseEventStack.length)
+  },
+
+  clearMouseEvents : function() {
+    while (this.mouseEvents.length > 0)
+      this.freeMouseEvent(this.mouseEvents.pop())
+  },
+
+  createFrameLoop : function() {
+    var self = this;
+    var fl = {
+      running : true,
+      stop : function() {
+        this.running = false;
+      },
+      run : function() {
+        if (fl.running) {
+          self.onFrame();
+          requestAnimFrame(fl.run, self.canvas);
+        }
+      }
+    };
+    requestAnimFrame(fl.run, this.canvas);
+    return fl;
+  },
+
+  /**
+    Start frame loop.
+
+    The frame loop is an interval, where #onFrame is called every
+    #frameDuration milliseconds.
+    */
+  play : function() {
+    this.stop();
+    this.realTime = new Date().getTime();
+    this.frameLoop = this.createFrameLoop();
+    this.isPlaying = true;
+  },
+
+  /**
+    Stop frame loop.
+    */
+  stop : function() {
+    this.__blurStop = false;
+    if (this.frameLoop) {
+      this.frameLoop.stop();
+      this.frameLoop = null;
+    }
+    this.isPlaying = false;
+  },
+
+  dispatchEvent : function(ev) {
+    var rv = CakeJS.CanvasNode.prototype.dispatchEvent.call(this, ev)
+    if (ev.cursor) {
+      if (this.canvas.style.cursor != ev.cursor)
+        this.canvas.style.cursor = ev.cursor
+    } else {
+      if (this.canvas.style.cursor != this.cursor)
+        this.canvas.style.cursor = this.cursor
+    }
+    return rv
+  },
+
+  /**
+    The frame loop function. Called every #frameDuration milliseconds.
+    Takes an optional external time parameter (for syncing Canvases with each
+    other, e.g. when using a CakeJS.Canvas as an image.)
+
+    If the time parameter is given, the second parameter is used as the frame
+    time delta (i.e. the time elapsed since last frame.)
+
+    If time or timeDelta is not given, the canvas computes its own timeDelta.
+
+    @param time The external time. Optional.
+    @param timeDelta Time since last frame in milliseconds. Optional.
+    */
+  onFrame : function(time, timeDelta) {
+    this.elementNodeZIndexCounter = 0
+    var ctx = this.getContext()
+    try {
+      var realTime = new Date().getTime()
+      this.currentRealElapsed = (realTime - this.realTime)
+      this.currentRealFps = 1000 / this.currentRealElapsed
+      var dt = this.frameDuration * this.speed
+      if (!this.fixedTimestep)
+        dt = this.currentRealElapsed * this.speed
+      this.realTime = realTime
+      if (time != null) {
+        this.time = time
+        if (timeDelta)
+          dt = timeDelta
+      } else {
+        this.time += dt
+      }
+      this.previousTarget = this.target
+      this.target = null
+      if (this.catchMouse)
+        this.handlePick(ctx)
+      if (this.previousTarget != this.target) {
+        if (this.previousTarget) {
+          var nev = document.createEvent('MouseEvents')
+          nev.initMouseEvent('mouseout', true, true, window,
+            0, 0, 0, 0, 0, false, false, false, false, 0, null)
+          nev.canvasTarget = this.previousTarget
+          this.dispatchEvent(nev)
+        }
+        if (this.target) {
+          var nev = document.createEvent('MouseEvents')
+          nev.initMouseEvent('mouseover', true, true, window,
+            0, 0, 0, 0, 0, false, false, false, false, 0, null)
+          nev.canvasTarget = this.target
+          this.dispatchEvent(nev)
+        }
+      }
+      this.handleUpdate(this.time, dt)
+      this.clearMouseEvents()
+      if (!this.redrawOnlyWhenChanged || this.changed) {
+        try {
+          this.handleDraw(ctx)
+        } catch(e) {
+          console.log(e)
+          throw(e)
+        }
+        this.changed = false
+      }
+      this.currentElapsed = (new Date().getTime() - this.realTime)
+      this.elapsed += this.currentElapsed
+      this.currentFps = 1000 / this.currentElapsed
+      this.frame++
+      if (this.frame % this.fpsFrames == 0) {
+        this.fps = this.fpsFrames*1000 / (this.elapsed)
+        this.realFps = this.fpsFrames*1000 / (new Date().getTime() - this.startTime)
+        this.elapsed = 0
+        this.startTime = new Date().getTime()
+      }
+    } catch(e) {
+      if (ctx) {
+        // screwed up, context is borked
+        try {
+          // FIXME don't be stupid
+          for (var i=0; i<1000; i++)
+            ctx.restore()
+        } catch(er) {}
+      }
+      delete this.context
+      throw(e)
+    }
+  },
+
+  /**
+    Returns the canvas drawing context object.
+
+    @return CakeJS.Canvas drawing context
+    */
+  getContext : function() {
+    if (this.recording)
+      return this.getRecordingContext()
+    else if (this.useMockContext)
+      return this.getMockContext()
+    else
+      return this.get2DContext()
+  },
+
+  /**
+    Gets and returns an augmented canvas 2D drawing context.
+
+    The canvas 2D context is augmented by setter functions for all
+    its instance variables, making it easier to record canvas operations in
+    a cross-browser fashion.
+    */
+  get2DContext : function() {
+    if (!this.context) {
+      var ctx = CakeJS.CanvasSupport.getContext(this.canvas, '2d')
+      this.context = ctx
+    }
+    return this.context
+  },
+
+  /**
+    Creates and returns a mock drawing context.
+
+    @return Mock drawing context
+    */
+  getMockContext : function() {
+    if (!this.fakeContext) {
+      var ctx = this.get2DContext()
+      this.fakeContext = {}
+      var f = function(){ return this }
+      for (var i in ctx) {
+        if (typeof(ctx[i]) == 'function')
+          this.fakeContext[i] = f
+        else
+          this.fakeContext[i] = ctx[i]
+      }
+      this.fakeContext.isMockObject = true
+      this.fakeContext.addColorStop = f
+    }
+    return this.fakeContext
+  },
+
+  getRecordingContext : function() {
+    if (!this.recordingContext)
+      this.recordingContext = new CakeJS.RecordingContext()
+    return this.recordingContext
+  },
+
+  /**
+    CakeJS.Canvas drawPickingPath uses the canvas rectangle as its path.
+
+    @param ctx CakeJS.Canvas drawing context
+    */
+  drawPickingPath : function(ctx) {
+    ctx.rect(0,0, this.canvas.width, this.canvas.height)
+  },
+
+  isPointInPath : function(x,y) {
+    return ((x >= 0) && (x <= this.canvas.width) && (y >= 0) && (y <= this.canvas.height))
+  },
+
+  /**
+    Sets globalAlpha to this.opacity and clears the canvas if #clear is set to
+    true. If #fill is also set to true, fills the canvas rectangle instead of
+    clearing (using #fillStyle as the color.)
+
+    @param ctx CakeJS.Canvas drawing context
+    */
+  draw : function(ctx) {
+    ctx.setGlobalAlpha( this.opacity )
+    if (this.clear) {
+      if (ctx.fillOn) {
+        ctx.beginPath()
+        ctx.rect(0,0, this.canvas.width, this.canvas.height)
+        ctx.fill()
+      } else {
+        ctx.clearRect(0,0, this.canvas.width, this.canvas.height)
+      }
+    }
+    // set default fill and stroke for the canvas contents
+    ctx.fillStyle = 'black'
+    ctx.strokeStyle = 'black'
+    ctx.fillOn = false
+    ctx.strokeOn = false
+  }
+})
+
+
+/**
+  Hacky link class for emulating <a>.
+
+  The correct way would be to have a real <a> under the cursor while hovering
+  this, or an imagemap polygon built from the clipped subtree path.
+
+  @param href Link href.
+  @param target Link target, defaults to _self.
+  @param config Optional config hash.
+  */
+LinkNode = CakeJS.Klass(CakeJS.CanvasNode, {
+  href : null,
+  target : '_self',
+  cursor : 'pointer',
+
+  initialize : function(href, target, config) {
+    this.href = href
+    if (target)
+      this.target = target
+    CakeJS.CanvasNode.initialize.call(this, config)
+    this.setupLinkEventListeners()
+  },
+
+  setupLinkEventListeners : function() {
+    this.addEventListener('click', function(ev) {
+      if (ev.button == CakeJS.Mouse.RIGHT) return
+      var target = this.target
+      if ((ev.ctrlKey || ev.button == CakeJS.Mouse.MIDDLE) && target == '_self')
+        target = '_blank'
+      window.open(this.href, target)
+    }, false)
+  }
+})
+
+
+/**
+  AudioNode is a CakeJS.CanvasNode used to play a sound.
+
+  */
+AudioNode = CakeJS.Klass(CakeJS.CanvasNode, {
+  ready : false,
+  autoPlay : false,
+  playing : false,
+  paused : false,
+  pan : 0,
+  volume : 1,
+  loop : false,
+
+  transformSound : false,
+
+  initialize : function(filename, params) {
+    CakeJS.CanvasNode.initialize.call(this, params)
+    this.filename = filename
+    this.when('load', this._autoPlaySound)
+    this.loadSound()
+  },
+
+  loadSound : function() {
+    this.sound = CakeJS.CanvasSupport.getSoundObject()
+    if (!this.sound) return
+    var self = this
+    this.sound.onready = function() {
+      self.ready = true
+      self.root.dispatchEvent({type: 'ready', canvasTarget: self})
+    }
+    this.sound.onload = function() {
+      self.loaded = true
+      self.root.dispatchEvent({type: 'load', canvasTarget: self})
+    }
+    this.sound.onerror = function() {
+      self.root.dispatchEvent({type: 'error', canvasTarget: self})
+    }
+    this.sound.onfinish = function() {
+      if (self.loop) self.play()
+      else self.stop()
+    }
+    this.sound.load(this.filename)
+  },
+
+  play : function() {
+    this.playing = true
+    this.needPlayUpdate = true
+  },
+
+  stop : function() {
+    this.playing = false
+    this.needPlayUpdate = true
+  },
+
+  pause : function() {
+    if (this.needPauseUpdate) {
+      this.needPauseUpdate = false
+      return
+    }
+    this.paused = !this.paused
+    this.needPauseUpdate = true
+  },
+
+  setVolume : function(v) {
+    this.volume = v
+    this.needStatusUpdate = true
+  },
+
+  setPan : function(p) {
+    this.pan = p
+    this.needStatusUpdate = true
+  },
+
+  handleUpdate : function() {
+    CakeJS.CanvasNode.handleUpdate.apply(this, arguments)
+    if (this.willBeDrawn) {
+      this.transform(null, true)
+      if (!this.sound) this.loadSound()
+      if (this.ready) {
+        if (this.transformSound) {
+          var x = this.currentMatrix[4]
+          var y = this.currentMatrix[5]
+          var a = this.currentMatrix[2]
+          var b = this.currentMatrix[3]
+          var c = this.currentMatrix[0]
+          var d = this.currentMatrix[1]
+          var hw = this.root.width * 0.5
+          var ys = Math.sqrt(a*a + b*b)
+          var xs = Math.sqrt(c*c + d*d)
+          this.setVolume(ys)
+          this.setPan((x - hw) / hw)
+        }
+        if (this.needPauseUpdate) {
+          this.needPauseUpdate = false
+          this._pauseSound()
+        }
+        if (this.needPlayUpdate) {
+          this.needPlayUpdate = false
+          if (this.playing) this._playSound()
+          else this._stopSound()
+        }
+        if (this.needStatusUpdate) {
+          this._setSoundVolume()
+          this._setSoundPan()
+        }
+      }
+    }
+  },
+
+  _autoPlaySound : function() {
+    if (this.autoPlay) this.play()
+  },
+
+  _setSoundVolume : function() {
+    this.sound.setVolume(this.volume)
+  },
+
+  _setSoundPan : function() {
+    this.sound.setPan(this.pan)
+  },
+
+  _playSound : function() {
+    if (this.sound.play() == false)
+      return this.playing = false
+    this.root.dispatchEvent({type: 'play', canvasTarget: this})
+  },
+
+  _stopSound : function() {
+    this.sound.stop()
+    this.root.dispatchEvent({type: 'stop', canvasTarget: this})
+  },
+
+  _pauseSound : function() {
+    this.sound.pause()
+    this.root.dispatchEvent({type: this.paused ? 'pause' : 'play', canvasTarget: this})
+  }
+})
+/**
+  A CakeJS.Drawable is a CakeJS.CanvasNode with possible fill, stroke and clip.
+
+  It draws the path by calling #drawGeometry
+  */
+CakeJS.Drawable = CakeJS.Klass(CakeJS.CanvasNode, {
+  pickable : true,
+  //   'inside' // clip before drawing the stroke
+  // | 'above'  // draw stroke after the fill
+  // | 'below'  // draw stroke before the fill
+  strokeMode : 'above',
+
+  ABOVE : 'above', BELOW : 'below', INSIDE : 'inside',
+
+  initialize : function(config) {
+    CakeJS.CanvasNode.initialize.call(this, config)
+  },
+
+  /**
+    Draws the picking path for the CakeJS.Drawable.
+
+    The default version begins a new path and calls drawGeometry.
+
+    @param ctx CakeJS.Canvas drawing context
+    */
+  drawPickingPath : function(ctx) {
+    if (!this.drawGeometry) return
+    ctx.beginPath()
+    this.drawGeometry(ctx)
+  },
+
+  /**
+    Returns true if the point x,y is inside the path of a drawable node.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
+    transform on the rectangle.
+
+    @param x X-coordinate of the point.
+    @param y Y-coordinate of the point.
+    @return Whether the point is inside the path of this node.
+    @type boolean
+    */
+  isPointInPath : function(x, y) {
+    return false
+  },
+
+  isVisible : function(ctx) {
+    var abb = this.getAxisAlignedBoundingBox()
+    if (!abb) return true
+    var x1 = abb[0], x2 = abb[0]+abb[2], y1 = abb[1], y2 = abb[1]+abb[3]
+    var w = this.root.width
+    var h = this.root.height
+    if (this.root.drawBoundingBoxes) {
+      ctx.save()
+        var bbox = this.getBoundingBox()
+        ctx.beginPath()
+        ctx.rect(bbox[0], bbox[1], bbox[2], bbox[3])
+        ctx.strokeStyle = 'green'
+        ctx.lineWidth = 1
+        ctx.stroke()
+      ctx.restore()
+      ctx.save()
+        CakeJS.CanvasSupport.setTransform(ctx, [1,0,0,1,0,0], this.currentMatrix)
+        ctx.beginPath()
+        ctx.rect(x1, y1, x2-x1, y2-y1)
+        ctx.strokeStyle = 'red'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      ctx.restore()
+    }
+    var visible = !(x2 < 0 || x1 > w || y2 < 0 || y1 > h)
+    return visible
+  },
+
+  createSubtreePath : function(ctx, skipTransform) {
+    ctx.save()
+    if (!skipTransform) this.transform(ctx, true)
+    if (this.drawGeometry) this.drawGeometry(ctx)
+    for (var i=0; i<this.childNodes.length; i++)
+      this.childNodes[i].createSubtreePath(ctx)
+    ctx.restore()
+  },
+
+  /**
+    Draws the CakeJS.Drawable. Begins a path and calls this.drawGeometry, followed by
+    possibly filling, stroking and clipping the path, depending on whether
+    #fill, #stroke and #clip are set.
+
+    @param ctx CakeJS.Canvas drawing context
+    */
+  draw : function(ctx) {
+    if (!this.drawGeometry) return
+    // bbox checking is slower than just drawing in most cases.
+    // and caching the bboxes is hard to do correctly.
+    // plus, bboxes aren't hierarchical.
+    // so we are being glib :|
+    if (this.root.drawBoundingBoxes)
+      this.isVisible(ctx)
+    var ft = (ctx.fillStyle.transformList ||
+              ctx.fillStyle.matrix ||
+              ctx.fillStyle.scale != null ||
+              ctx.fillStyle.rotation ||
+              ctx.fillStyle.x ||
+              ctx.fillStyle.y )
+    var st = (ctx.strokeStyle.transformList ||
+              ctx.strokeStyle.matrix ||
+              ctx.strokeStyle.scale != null ||
+              ctx.strokeStyle.rotation ||
+              ctx.strokeStyle.x ||
+              ctx.strokeStyle.y )
+    ctx.beginPath()
+    this.drawGeometry(ctx)
+    if (ctx.strokeOn) {
+      switch (this.strokeMode) {
+        case this.ABOVE:
+          if (ctx.fillOn) this.doFill(ctx,ft)
+          this.doStroke(ctx, st)
+          break
+        case this.BELOW:
+          this.doStroke(ctx, st)
+          if (ctx.fillOn) this.doFill(ctx,ft)
+          break
+        case this.INSIDE:
+          if (ctx.fillOn) this.doFill(ctx,ft)
+          ctx.save()
+          var lw = ctx.lineWidth
+          ctx.setLineWidth(1)
+          this.doStroke(ctx, st)
+          ctx.setLineWidth(lw)
+          ctx.clip()
+          this.doStroke(ctx, st)
+          ctx.restore()
+          break
+      }
+    } else if (ctx.fillOn) {
+      this.doFill(ctx,ft)
+    }
+    this.drawMarkers(ctx)
+    if (this.clip) ctx.clip()
+  },
+
+  doFill : function(ctx, ft) {
+    if (ft || (this.getBoundingBox && ctx.fillStyle.units == this.OBJECTBOUNDINGBOX)) {
+      ctx.save()
+      if (this.getBoundingBox && ctx.fillStyle.units == this.OBJECTBOUNDINGBOX) {
+        var bb = this.getBoundingBox()
+        var sx = bb[2]
+        var sy = bb[3]
+        ctx.translate(bb[0],bb[1])
+        ctx.scale(sx,sy)
+      }
+      ctx.fillStyle.transform(ctx)
+    }
+    if (this.fillOpacity != null) {
+      var go = ctx.globalAlpha
+      ctx.setGlobalAlpha(go * this.fillOpacity)
+      ctx.fill()
+      ctx.globalAlpha = go
+    } else {
+      ctx.fill()
+    }
+    if (ft) ctx.restore()
+  },
+
+  doStroke : function(ctx, st) {
+    if (st || (this.getBoundingBox && ctx.strokeStyle.units == this.OBJECTBOUNDINGBOX)) {
+      ctx.save()
+      if (this.getBoundingBox && ctx.strokeStyle.units == this.OBJECTBOUNDINGBOX) {
+        var bb = this.getBoundingBox()
+        var sx = bb[2]
+        var sy = bb[3]
+        ctx.translate(bb[0],bb[1])
+        ctx.scale(sx,sy)
+      }
+      ctx.strokeStyle.needMatrixUpdate = true
+      ctx.strokeStyle.transform(ctx)
+      if (sx != null)
+        CakeJS.CanvasSupport.tScale(ctx.strokeStyle.currentMatrix, sx, sy)
+      var cm = ctx.strokeStyle.currentMatrix
+      // fix stroke width scale (non-uniform scales screw us up though)
+      var sw = Math.sqrt(Math.max(
+        cm[0]*cm[0] + cm[1]*cm[1],
+        cm[2]*cm[2] + cm[3]*cm[3]
+      ))
+      ctx.setLineWidth(((ctx.lineWidth == null) ? 1 : ctx.lineWidth) / sw)
+    }
+    if (this.strokeOpacity != null) {
+      var go = ctx.globalAlpha
+      ctx.setGlobalAlpha(go * this.strokeOpacity)
+      ctx.stroke()
+      ctx.globalAlpha = go
+    } else {
+      ctx.stroke()
+    }
+    if (st) ctx.restore()
+  },
+
+  drawMarkers : function(ctx) {
+    var sm = this.markerStart || this.marker
+    var em = this.markerEnd || this.marker
+    var mm = this.markerMid || this.marker
+    if (sm && this.getStartPoint) {
+      var pa = this.getStartPoint()
+      if (sm.orient != null && sm.orient != 'auto')
+        pa.angle = sm.orient
+      var scale = (sm.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
+      ctx.save()
+        ctx.translate(pa.point[0], pa.point[1])
+        ctx.scale(scale, scale)
+        ctx.rotate(pa.angle)
+        var mat = CakeJS.CanvasSupport.tRotate(
+          CakeJS.CanvasSupport.tScale(
+          CakeJS.CanvasSupport.tTranslate(
+            this.currentMatrix.slice(0),
+            pa.point[0], pa.point[1]
+          ), scale, scale), pa.angle)
+        sm.__copyMatrix(mat)
+        sm.handleDraw(ctx)
+      ctx.restore()
+    }
+    if (em && this.getEndPoint) {
+      var pa = this.getEndPoint()
+      if (em.orient != null && em.orient != 'auto')
+        pa.angle = em.orient
+      var scale = (em.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
+      ctx.save()
+        ctx.translate(pa.point[0], pa.point[1])
+        ctx.scale(scale, scale)
+        ctx.rotate(pa.angle)
+        var mat = CakeJS.CanvasSupport.tRotate(
+          CakeJS.CanvasSupport.tScale(
+          CakeJS.CanvasSupport.tTranslate(
+            this.currentMatrix.slice(0),
+            pa.point[0], pa.point[1]
+          ), scale, scale), pa.angle)
+        em.__copyMatrix(mat)
+        em.handleDraw(ctx)
+      ctx.restore()
+    }
+    if (mm && this.getMidPoints) {
+      var pas = this.getMidPoints()
+      var scale = (mm.markerUnits == 'strokeWidth') ? ctx.lineWidth : 1
+      for (var i=0; i<pas.length; i++) {
+        var pa = pas[i]
+        ctx.save()
+          ctx.translate(pa.point[0], pa.point[1])
+          ctx.scale(scale, scale)
+          if (mm.orient != null && mm.orient != 'auto')
+            pa.angle = em.orient
+          ctx.rotate(pa.angle)
+          var mat = CakeJS.CanvasSupport.tRotate(
+            CakeJS.CanvasSupport.tScale(
+            CakeJS.CanvasSupport.tTranslate(
+              this.currentMatrix.slice(0),
+              pa.point[0], pa.point[1]
+            ), scale, scale), pa.angle)
+          mm.__copyMatrix(mat)
+          mm.handleDraw(ctx)
+        ctx.restore()
+      }
+    }
+  },
+
+  getStartPoint : false,
+  getEndPoint : false,
+  getMidPoints : false,
+  getBoundingBox : false
+
+})
+/**
+  CakeJS.CatmullRomSpline draws a Catmull-Rom spline, with optional looping and
+  path closing. Handy for motion paths.
+
+  @param segments Control points for the spline, as [[x,y], [x,y], ...]
+  @param config Optional config hash.
+  */
+CakeJS.CatmullRomSpline = CakeJS.Klass(CakeJS.Drawable, {
+  segments : [],
+  loop : false,
+  closePath : false,
+
+  initialize : function(segments, config) {
+    this.segments = segments
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  drawGeometry : function(ctx) {
+    var x1 = this.currentMatrix[0]
+    var x2 = this.currentMatrix[1]
+    var y1 = this.currentMatrix[2]
+    var y2 = this.currentMatrix[3]
+    var xs = x1*x1 + x2*x2
+    var ys = y1*y1 + y2*y2
+    var s = Math.floor(Math.sqrt(Math.max(xs, ys)))
+    var cmp = this.compiled
+    if (!cmp || cmp.scale != s) {
+      cmp = this.compile(s)
+    }
+    for (var i=0; i<cmp.length; i++) {
+      var cmd = cmp[i]
+      ctx[cmd[0]].apply(ctx, cmd[1])
+    }
+    if (this.closePath)
+      ctx.closePath()
+  },
+
+  compile : function(scale) {
+    if (!scale) scale = 1
+    var compiled = []
+    if (this.segments && this.segments.length >= (this.loop ? 1 : 4)) {
+      var segs = this.segments
+      if (this.loop) {
+        segs = segs.slice(0)
+        segs.unshift(segs[segs.length-1])
+        segs.push(segs[1])
+        segs.push(segs[2])
+      }
+      // FIXME don't be stupid
+      var point_spacing = 1 / (15 * (scale+0.5))
+      var a,b,c,d,p,pp
+      compiled.push(['moveTo', segs[1].slice(0)])
+      p = segs[1]
+      for (var j=1; j<segs.length-2; j++) {
+        a = segs[j-1]
+        b = segs[j]
+        c = segs[j+1]
+        d = segs[j+2]
+        for (var i=0; i<1; i+=point_spacing) {
+          pp = p
+          p = CakeJS.Curves.catmullRomPoint(a,b,c,d,i)
+          compiled.push(['lineTo', p])
+        }
+      }
+      p = CakeJS.Curves.catmullRomPoint(a,b,c,d,1)
+      compiled.push(['lineTo', p])
+    }
+    compiled.scale = scale
+    this.compiled = compiled
+    return compiled
+  },
+
+  getBoundingBox : function() {
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    var segments = (this.compiled ? this.compiled : this.compile())
+    for (var i=0; i<segments.length; i++) {
+      var seg = segments[i][1]
+      for (var j=0; j<seg.length; j+=2) {
+        var x = seg[j], y = seg[j+1]
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+    return [minX, minY, maxX-minX, maxY-minY]
+  },
+
+  pointAt : function(t) {
+    if (!this.segments) return [0,0]
+    if (this.segments.length >= (this.loop ? 1 : 4)) {
+      var segs = this.segments
+      if (this.loop) {
+        segs = segs.slice(0)
+        segs.unshift(segs[segs.length-1])
+        segs.push(segs[1])
+        segs.push(segs[2])
+      }
+      // turn t into segment_index.segment_t
+      var rt = t * (segs.length - 3)
+      var j = Math.floor(rt)
+      var st = rt-j
+      var a = segs[j],
+          b = segs[j+1],
+          c = segs[j+2],
+          d = segs[j+3]
+      return CakeJS.Curves.catmullRomPoint(a,b,c,d,st)
+    } else {
+      return this.segments[0]
+    }
+  },
+
+  pointAngleAt : function(t) {
+    if (!this.segments) return {point: [0,0], angle: 0}
+    if (this.segments.length >= (this.loop ? 1 : 4)) {
+      var segs = this.segments
+      if (this.loop) {
+        segs = segs.slice(0)
+        segs.unshift(segs[segs.length-1])
+        segs.push(segs[1])
+        segs.push(segs[2])
+      }
+      // turn t into segment_index.segment_t
+      var rt = t * (segs.length - 3)
+      var j = Math.floor(rt)
+      var st = rt-j
+      var a = segs[j],
+          b = segs[j+1],
+          c = segs[j+2],
+          d = segs[j+3]
+      return CakeJS.Curves.catmullRomPointAngle(a,b,c,d,st)
+    } else {
+      return {point:this.segments[0] || [0,0], angle: 0}
+    }
+  }
+})
+/**
+  CakeJS.Circle is used for creating circular paths.
+
+  Uses context.arc(...).
+
+  Attributes:
+    cx, cy, radius, startAngle, endAngle, clockwise, closePath, includeCenter
+
+  @param radius Radius of the circle.
+  @param config Optional config hash.
+  */
+CakeJS.Circle = CakeJS.Klass(CakeJS.Drawable, {
+  cx : 0,
+  cy : 0,
+  radius : 10,
+  startAngle : 0,
+  endAngle : Math.PI * 2,
+  clockwise : false,
+  closePath : true,
+  includeCenter : false,
+
+  initialize : function(radius, config) {
+    if (radius != null) this.radius = radius
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  /**
+    Creates a circular path using ctx.arc(...).
+
+    @param ctx CakeJS.Canvas drawing context.
+    */
+  drawGeometry : function(ctx) {
+    if (this.radius == 0) return
+    if (this.includeCenter)
+      ctx.moveTo(this.cx, this.cy)
+    ctx.arc(this.cx, this.cy, this.radius, this.startAngle, this.endAngle, this.clockwise)
+    if (this.closePath) {
+      // firefox 2 is buggy without the endpoint
+      var x2 = Math.cos(this.endAngle)
+      var y2 = Math.sin(this.endAngle)
+      ctx.moveTo(this.cx + x2*this.radius, this.cy + y2 * this.radius)
+      ctx.closePath()
+    }
+  },
+
+  /**
+    Returns true if the point x,y is inside the radius of the circle.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,0 will always be inside a circle with radius of 10 and center at origin,
+    regardless of the transform on the circle.
+
+    @param x X-coordinate of the point.
+    @param y Y-coordinate of the point.
+    @return Whether the point is inside the radius of this circle.
+    @type boolean
+    */
+  isPointInPath : function(x,y) {
+    x -= this.cx
+    y -= this.cy
+    return (x*x + y*y) <= (this.radius*this.radius)
+  },
+
+  getBoundingBox : function() {
+    return [this.cx-this.radius, this.cy-this.radius,
+            2*this.radius, 2*this.radius]
+  }
+})
+/**
+  CakeJS.Ellipse is a scaled circle. Except it isn't. Because that wouldn't work in
+  Opera.
+  */
+CakeJS.Ellipse = CakeJS.Klass(CakeJS.Circle, {
+  radiusX : 0,
+  radiusY : 0,
+
+  initialize : function(radiusX, radiusY, config) {
+    this.radiusX = radiusX
+    this.radiusY = radiusY
+    CakeJS.Circle.initialize.call(this, 1, config)
+  },
+
+  drawGeometry : function(ctx) {
+    if (this.radiusX == 0 || this.radiusY == 0) return
+    var k = 0.5522847498
+    var x = this.cx
+    var y = this.cy
+    var krx = k*this.radiusX
+    var kry = k*this.radiusY
+    ctx.moveTo(x+this.radiusX, y)
+    ctx.bezierCurveTo(x+this.radiusX, y-kry, x+krx, y-this.radiusY, x, y-this.radiusY)
+    ctx.bezierCurveTo(x-krx, y-this.radiusY, x-this.radiusX, y-kry, x-this.radiusX, y)
+    ctx.bezierCurveTo(x-this.radiusX, y+kry, x-krx, y+this.radiusY, x, y+this.radiusY)
+    ctx.bezierCurveTo(x+krx, y+this.radiusY, x+this.radiusX, y+kry, x+this.radiusX, y)
+  },
+
+  isPointInPath : function(x, y) {
+    // does this work?
+    x -= this.cx
+    y -= this.cy
+    x /= this.radiusX
+    y /= this.radiusY
+    return (x*x + y*y) <= 1
+  },
+
+  getBoundingBox : function() {
+    return [this.cx-this.radiusX, this.cy-this.radiusY,
+            this.radiusX*2, this.radiusY*2]
+  }
+})
+/**
+  CakeJS.ImageNode is used for drawing images. Creates a rectangular path around
+  the drawn image.
+
+  Attributes:
+
+    centered - If true, image center is at the origin.
+               Otherwise image top-left is at the origin.
+    usePattern - Use a pattern fill for drawing the image (instead of
+                 drawImage.) Doesn't do sub-image drawing, and Safari doesn't
+                 like scaled image patterns.
+    sX, sY, sWidth, sHeight - Area of image to draw. Optional.
+    dX, dY - Coordinates where to draw the image. Default is 0, 0.
+    dWidth, dHeight - Size of the drawn image. Optional.
+
+  Example:
+
+    var img = new Image()
+    img.src = 'foo.jpg'
+    var imageGeo = new CakeJS.ImageNode(img)
+
+  @param image Image to draw.
+  @param config Optional config hash.
+  */
+CakeJS.ImageNode = CakeJS.Klass(CakeJS.Drawable, {
+  centered : false,
+  usePattern : false,
+
+  sX : 0,
+  sY : 0,
+  sWidth : null,
+  sHeight : null,
+
+  dX : 0,
+  dY : 0,
+  dWidth : null,
+  dHeight : null,
+
+  initialize : function(image, config) {
+    this.image = image
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  /**
+    Draws the image on the given drawing context.
+
+    Creates a rectangular path around the drawn image (for possible stroke
+    and/or fill.)
+
+    @param ctx CakeJS.Canvas drawing context.
+    */
+  drawGeometry : function(ctx) {
+    if (Object.isImageLoaded(this.image)) {
+      var w = this.dWidth == null ? this.image.width : this.dWidth
+      var h = this.dHeight == null ? this.image.height : this.dHeight
+      var x = this.dX + (this.centered ? -w * 0.5 : 0)
+      var y = this.dY + (this.centered ? -h * 0.5 : 0)
+      if (this.dWidth != null) {
+        if (this.sWidth != null) {
+          ctx.drawImage(this.image,
+            this.sX, this.sY, this.sWidth, this.sHeight,
+            x, y, w, h)
+        } else {
+          ctx.drawImage(this.image, x, y, w, h)
+        }
+      } else {
+        w = this.image.width
+        h = this.image.height
+        if (this.usePattern) {
+          if (!this.imagePattern)
+            this.imagePattern = new CakeJS.Pattern(this.image, 'repeat')
+          var fs = this.imagePattern.compiled
+          if (!fs)
+            fs = this.imagePattern.compile(ctx)
+          ctx.save()
+          ctx.beginPath()
+          ctx.rect(x, y, w, h)
+          ctx.setFillStyle(fs)
+          ctx.fill()
+          ctx.restore()
+          ctx.beginPath()
+        } else {
+          ctx.drawImage(this.image, x, y)
+        }
+      }
+    } else {
+      var w = this.dWidth
+      var h = this.dHeight
+      if (!( w && h )) return
+      var x = this.dX + (this.centered ? -w * 0.5 : 0)
+      var y = this.dY + (this.centered ? -h * 0.5 : 0)
+    }
+    ctx.rect(x, y, w, h)
+  },
+
+  /**
+    Creates a bounding rectangle path for the image on the given drawing
+    context.
+
+    @param ctx CakeJS.Canvas drawing context.
+    */
+  drawPickingPath : function(ctx) {
+    var x = this.dX + (this.centered ? -this.image.width * 0.5 : 0)
+    var y = this.dY + (this.centered ? -this.image.height * 0.5 : 0)
+    var w = this.dWidth
+    var h = this.dHeight
+    if (this.dWidth == null) {
+      w = this.image.width
+      h = this.image.height
+    }
+    ctx.rect(x, y, w, h)
+  },
+
+  /**
+    Returns true if the point x,y is inside the image rectangle.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
+    transform on the rectangle.
+
+    @param x X-coordinate of the point.
+    @param y Y-coordinate of the point.
+    @return Whether the point is inside the image rectangle.
+    @type boolean
+    */
+  isPointInPath : function(x,y) {
+    x -= this.dX
+    y -= this.dY
+    if (this.centered) {
+      x += this.image.width * 0.5
+      y += this.image.height * 0.5
+    }
+    var w = this.dWidth
+    var h = this.dHeight
+    if (this.dWidth == null) {
+      w = this.image.width
+      h = this.image.height
+    }
+    return ((x >= 0) && (x <= w) && (y >= 0) && (y <= h))
+  },
+
+  getBoundingBox : function() {
+    x = this.dX
+    y = this.dY
+    if (this.centered) {
+      x -= this.image.width * 0.5
+      y -= this.image.height * 0.5
+    }
+    var w = this.dWidth
+    var h = this.dHeight
+    if (this.dWidth == null) {
+      w = this.image.width
+      h = this.image.height
+    }
+    return [x, y, w, h]
+  }
+})
+
+CakeJS.ImageNode.load = function(src) {
+  var img = new Image();
+  img.src = src;
+  var imgn = new CakeJS.ImageNode(img);
+  return imgn;
+}
+/**
+  A CakeJS.Line is a line drawn from x1,y1 to x2,y2. Lines are stroked by default.
+
+  @param x1 X-coordinate of the line's first point.
+  @param y1 Y-coordinate of the line's first point.
+  @param x2 X-coordinate of the line's second point.
+  @param y2 Y-coordinate of the line's second point.
+  @param config Optional config hash.
+  */
+CakeJS.Line = CakeJS.Klass(CakeJS.Drawable, {
+  x1 : 0,
+  y1 : 0,
+  x2 : 0,
+  y2 : 0,
+  stroke : true,
+
+  initialize : function(x1,y1, x2,y2, config) {
+    this.x1 = x1
+    this.y1 = y1
+    this.x2 = x2
+    this.y2 = y2
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  drawGeometry : function(ctx) {
+    ctx.moveTo(this.x1, this.y1)
+    ctx.lineTo(this.x2, this.y2)
+  },
+
+  getStartPoint : function() {
+    return {
+      point: [this.x1, this.y1],
+      angle: Math.atan2(this.y2-this.y1, this.x2-this.x1)
+    }
+  },
+
+  getEndPoint : function() {
+    return {
+      point: [this.x2, this.y2],
+      angle: Math.atan2(this.y2-this.y1, this.x2-this.x1)
+    }
+  },
+
+  getBoundingBox : function() {
+    return [this.x1, this.y1, this.x2-this.x1, this.y2-this.y1]
+  },
+
+  getLength : function() {
+    return CakeJS.Curves.lineLength([this.x1, this.y1], [this.x2, this.y2])
+  }
+})
+/**
+  Path is used for creating custom paths.
+
+  Attributes: segments, closePath.
+
+    var path = new Path([
+      ['moveTo', [-50, -60]],
+      ['lineTo', [30, 50],
+      ['lineTo', [-50, 50]],
+      ['bezierCurveTo', [-50, 100, -50, 100, 0, 100]],
+      ['quadraticCurveTo', [0, 120, -20, 130]],
+      ['quadraticCurveTo', [0, 140, 0, 160]],
+      ['bezierCurveTo', [-10, 160, -20, 170, -30, 180]],
+      ['quadraticCurveTo', [10, 230, -50, 260]]
+    ])
+
+  The path segments are used as [methodName, arguments] on the canvas
+  drawing context, so the possible path segments are:
+
+    ['moveTo', [x, y]]
+    ['lineTo', [x, y]]
+    ['quadraticCurveTo', [control_point_x, control_point_y, x, y]]
+    ['bezierCurveTo', [cp1x, cp1y, cp2x, cp2y, x, y]]
+    ['arc', [x, y, radius, startAngle, endAngle, drawClockwise]]
+    ['arcTo', [x1, y1, x2, y2, radius]]
+    ['rect', [x, y, width, height]]
+
+  You can also pass an SVG path string as segments.
+
+    var path = new Path("M 100 100 L 300 100 L 200 300 z", {
+      stroke: true, strokeStyle: 'blue',
+      fill: true, fillStyle: 'red',
+      lineWidth: 3
+    })
+
+  @param segments The path segments.
+  @param config Optional config hash.
+  */
+CakeJS.Path = CakeJS.Klass(CakeJS.Drawable, {
+  segments : [],
+  closePath : false,
+
+  initialize : function(segments, config) {
+    this.segments = segments
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  /**
+    Creates a path on the given drawing context.
+
+    For each path segment, calls the context method named in the first element
+    of the segment with the rest of the segment elements as arguments.
+
+    SVG paths are parsed and executed.
+
+    Closes the path if closePath is true.
+
+    @param ctx CakeJS.Canvas drawing context.
+    */
+  drawGeometry : function(ctx) {
+    var segments = this.getSegments()
+    for (var i=0; i<segments.length; i++) {
+      var seg = segments[i]
+      ctx[seg[0]].apply(ctx, seg[1])
+    }
+    if (this.closePath)
+      ctx.closePath()
+  },
+
+  /**
+    Returns true if the point x,y is inside the path's bounding rectangle.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
+    transform on the rectangle.
+
+    @param px X-coordinate of the point.
+    @param py Y-coordinate of the point.
+    @return Whether the point is inside the path's bounding rectangle.
+    @type boolean
+    */
+  isPointInPath : function(px,py) {
+    var bbox = this.getBoundingBox()
+    return (px >= bbox[0] && px <= bbox[0]+bbox[2] &&
+            py >= bbox[1] && py <= bbox[1]+bbox[3])
+  },
+
+  getBoundingBox : function() {
+    if (!(this.compiled && this.compiledBoundingBox)) {
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      var segments = this.getSegments()
+      for (var i=0; i<segments.length; i++) {
+        var seg = segments[i][1]
+        for (var j=0; j<seg.length; j+=2) {
+          var x = seg[j], y = seg[j+1]
+          if (x < minX) minX = x
+          if (x > maxX) maxX = x
+          if (y < minY) minY = y
+          if (y > maxY) maxY = y
+        }
+      }
+      this.compiledBoundingBox = [minX, minY, maxX-minX, maxY-minY]
+    }
+    return this.compiledBoundingBox
+  },
+
+  getStartPoint : function() {
+    var segs = this.getSegments()
+    if (!segs || !segs[0]) return {point: [0,0], angle: 0}
+    var fs = segs[0]
+    var c = fs[1]
+    var point = [c[c.length-2], c[c.length-1]]
+    var ss = segs[1]
+    var angle = 0
+    if (ss) {
+      c2 = ss[1]
+      angle = CakeJS.Curves.lineAngle(point, [c2[c2.length-2], c2[c2.length-1]])
+    }
+    return {
+      point: point,
+      angle: angle
+    }
+  },
+
+  getEndPoint : function() {
+    var segs = this.getSegments()
+    if (!segs || !segs[0]) return {point: [0,0], angle: 0}
+    var fs = segs[segs.length-1]
+    var c = fs[1]
+    var point = [c[c.length-2], c[c.length-1]]
+    var ss = segs[segs.length-2]
+    var angle = 0
+    if (ss) {
+      c2 = ss[1]
+      angle = CakeJS.Curves.lineAngle([c2[c2.length-2], c2[c2.length-1]], point)
+    }
+    return {
+      point: point,
+      angle: angle
+    }
+  },
+
+  getMidPoints : function() {
+    var segs = this.getSegments()
+    if (this.vertices)
+      return this.vertices.slice(1,-1)
+    var verts = []
+    for (var i=1; i<segs.length-1; i++) {
+      var b = segs[i-1][1].slice(-2)
+      var c = segs[i][1].slice(0,2)
+      if (segs[i-1].length > 2) {
+        var a = segs[i-1][1].slice(-4,-2)
+        var t = 0.5 * (Curves.lineAngle(a,b) + CakeJS.Curves.lineAngle(b,c))
+      } else {
+        var t = CakeJS.Curves.lineAngle(b,c)
+      }
+      verts.push(
+        {point: b, angle: t}
+      )
+      var id = segs[i][2]
+      if (id != null) {
+        i++
+        while (segs[i] && segs[i][2] == id) i++
+        i--
+      }
+    }
+    return verts
+  },
+
+  getSegments : function() {
+    if (typeof(this.segments) == 'string') {
+      if (!this.compiled || this.segments != this.compiledSegments) {
+        this.compiled = this.compileSVGPath(this.segments)
+        this.compiledSegments = this.segments
+      }
+    } else if (!this.compiled) {
+      this.compiled = Object.clone(this.segments)
+    }
+    return this.compiled
+  },
+
+  /**
+    Compiles an SVG path string into an array of canvas context method calls.
+
+    Returns an array of [methodName, [arg1, arg2, ...]] method call arrays.
+    */
+  compileSVGPath : function(svgPath) {
+    var segs = svgPath.split(/(?=[a-z])/i)
+    var x = 0
+    var y = 0
+    var px,py
+    var pc
+    var commands = []
+    for (var i=0; i<segs.length; i++) {
+      var seg = segs[i]
+      var cmd = seg.match(/[a-z]/i)
+      if (!cmd) return [];
+      cmd = cmd[0];
+      var coords = seg.match(/[+-]?\d+(\.\d+(e\d+(\.\d+)?)?)?/gi)
+      if (coords) coords = coords.map(parseFloat)
+      switch(cmd) {
+        case 'M':
+          x = coords[0]
+          y = coords[1]
+          px = py = null
+          commands.push(['moveTo', [x, y]])
+          break
+        case 'm':
+          x += coords[0]
+          y += coords[1]
+          px = py = null
+          commands.push(['moveTo', [x, y]])
+          break
+
+        case 'L':
+          x = coords[0]
+          y = coords[1]
+          px = py = null
+          commands.push(['lineTo', [x, y]])
+          break
+        case 'l':
+          x += coords[0]
+          y += coords[1]
+          px = py = null
+          commands.push(['lineTo', [x, y]])
+          break
+        case 'H':
+          x = coords[0]
+          px = py = null
+          commands.push(['lineTo', [x, y]])
+          break
+        case 'h':
+          x += coords[0]
+          px = py = null
+          commands.push(['lineTo', [x,y]])
+          break
+        case 'V':
+          y = coords[0]
+          px = py = null
+          commands.push(['lineTo', [x,y]])
+          break
+        case 'v':
+          y += coords[0]
+          px = py = null
+          commands.push(['lineTo', [x,y]])
+          break
+
+        case 'C':
+          x = coords[4]
+          y = coords[5]
+          px = coords[2]
+          py = coords[3]
+          commands.push(['bezierCurveTo', coords])
+          break
+        case 'c':
+          commands.push(['bezierCurveTo',[
+            coords[0] + x, coords[1] + y,
+            coords[2] + x, coords[3] + y,
+            coords[4] + x, coords[5] + y
+          ]])
+          px = x + coords[2]
+          py = y + coords[3]
+          x += coords[4]
+          y += coords[5]
+          break
+
+        case 'S':
+          if (px == null || !pc.match(/[sc]/i)) {
+            px = x
+            py = y
+          }
+          commands.push(['bezierCurveTo',[
+            x-(px-x), y-(py-y),
+            coords[0], coords[1],
+            coords[2], coords[3]
+          ]])
+          px = coords[0]
+          py = coords[1]
+          x = coords[2]
+          y = coords[3]
+          break
+        case 's':
+          if (px == null || !pc.match(/[sc]/i)) {
+            px = x
+            py = y
+          }
+          commands.push(['bezierCurveTo',[
+            x-(px-x), y-(py-y),
+            x + coords[0], y + coords[1],
+            x + coords[2], y + coords[3]
+          ]])
+          px = x + coords[0]
+          py = y + coords[1]
+          x += coords[2]
+          y += coords[3]
+          break
+
+        case 'Q':
+          px = coords[0]
+          py = coords[1]
+          x = coords[2]
+          y = coords[3]
+          commands.push(['quadraticCurveTo', coords])
+          break
+        case 'q':
+          commands.push(['quadraticCurveTo',[
+            coords[0] + x, coords[1] + y,
+            coords[2] + x, coords[3] + y
+          ]])
+          px = x + coords[0]
+          py = y + coords[1]
+          x += coords[2]
+          y += coords[3]
+          break
+
+        case 'T':
+          if (px == null || !pc.match(/[qt]/i)) {
+            px = x
+            py = y
+          } else {
+            px = x-(px-x)
+            py = y-(py-y)
+          }
+          commands.push(['quadraticCurveTo',[
+            px, py,
+            coords[0], coords[1]
+          ]])
+          px = x-(px-x)
+          py = y-(py-y)
+          x = coords[0]
+          y = coords[1]
+          break
+        case 't':
+          if (px == null || !pc.match(/[qt]/i)) {
+            px = x
+            py = y
+          } else {
+            px = x-(px-x)
+            py = y-(py-y)
+          }
+          commands.push(['quadraticCurveTo',[
+            px, py,
+            x + coords[0], y + coords[1]
+          ]])
+          x += coords[0]
+          y += coords[1]
+          break
+
+        case 'A':
+          var arc_segs = this.solveArc(x,y, coords)
+          for (var l=0; l<arc_segs.length; l++) arc_segs[l][2] = i
+          commands.push.apply(commands, arc_segs)
+          x = coords[5]
+          y = coords[6]
+          break
+        case 'a':
+          coords[5] += x
+          coords[6] += y
+          var arc_segs = this.solveArc(x,y, coords)
+          for (var l=0; l<arc_segs.length; l++) arc_segs[l][2] = i
+          commands.push.apply(commands, arc_segs)
+          x = coords[5]
+          y = coords[6]
+          break
+
+        case 'Z':
+          commands.push(['closePath', []])
+          break
+        case 'z':
+          commands.push(['closePath', []])
+          break
+      }
+      pc = cmd
+    }
+    return commands
+  },
+
+  solveArc : function(x, y, coords) {
+    var rx = coords[0]
+    var ry = coords[1]
+    var rot = coords[2]
+    var large = coords[3]
+    var sweep = coords[4]
+    var ex = coords[5]
+    var ey = coords[6]
+    var segs = this.arcToSegments(ex, ey, rx, ry, large, sweep, rot, x, y)
+    var retval = []
+    for (var i=0; i<segs.length; i++) {
+      retval.push(['bezierCurveTo', this.segmentToBezier.apply(this, segs[i])])
+    }
+    return retval
+  },
+
+
+  // Copied from Inkscape svgtopdf, thanks!
+  arcToSegments : function(x, y, rx, ry, large, sweep, rotateX, ox, oy) {
+    var th = rotateX * (Math.PI/180)
+    var sin_th = Math.sin(th)
+    var cos_th = Math.cos(th)
+    rx = Math.abs(rx)
+    ry = Math.abs(ry)
+    var px = cos_th * (ox - x) * 0.5 + sin_th * (oy - y) * 0.5
+    var py = cos_th * (oy - y) * 0.5 - sin_th * (ox - x) * 0.5
+    var pl = (px*px) / (rx*rx) + (py*py) / (ry*ry)
+    if (pl > 1) {
+      pl = Math.sqrt(pl)
+      rx *= pl
+      ry *= pl
+    }
+
+    var a00 = cos_th / rx
+    var a01 = sin_th / rx
+    var a10 = (-sin_th) / ry
+    var a11 = (cos_th) / ry
+    var x0 = a00 * ox + a01 * oy
+    var y0 = a10 * ox + a11 * oy
+    var x1 = a00 * x + a01 * y
+    var y1 = a10 * x + a11 * y
+
+    var d = (x1-x0) * (x1-x0) + (y1-y0) * (y1-y0)
+    var sfactor_sq = 1 / d - 0.25
+    if (sfactor_sq < 0) sfactor_sq = 0
+    var sfactor = Math.sqrt(sfactor_sq)
+    if (sweep == large) sfactor = -sfactor
+    var xc = 0.5 * (x0 + x1) - sfactor * (y1-y0)
+    var yc = 0.5 * (y0 + y1) + sfactor * (x1-x0)
+
+    var th0 = Math.atan2(y0-yc, x0-xc)
+    var th1 = Math.atan2(y1-yc, x1-xc)
+
+    var th_arc = th1-th0
+    if (th_arc < 0 && sweep == 1){
+      th_arc += 2*Math.PI
+    } else if (th_arc > 0 && sweep == 0) {
+      th_arc -= 2 * Math.PI
+    }
+
+    var segments = Math.ceil(Math.abs(th_arc / (Math.PI * 0.5 + 0.001)))
+    var result = []
+    for (var i=0; i<segments; i++) {
+      var th2 = th0 + i * th_arc / segments
+      var th3 = th0 + (i+1) * th_arc / segments
+      result[i] = [xc, yc, th2, th3, rx, ry, sin_th, cos_th]
+    }
+
+    return result
+  },
+
+  segmentToBezier : function(cx, cy, th0, th1, rx, ry, sin_th, cos_th) {
+    var a00 = cos_th * rx
+    var a01 = -sin_th * ry
+    var a10 = sin_th * rx
+    var a11 = cos_th * ry
+
+    var th_half = 0.5 * (th1 - th0)
+    var t = (8/3) * Math.sin(th_half * 0.5) * Math.sin(th_half * 0.5) / Math.sin(th_half)
+    var x1 = cx + Math.cos(th0) - t * Math.sin(th0)
+    var y1 = cy + Math.sin(th0) + t * Math.cos(th0)
+    var x3 = cx + Math.cos(th1)
+    var y3 = cy + Math.sin(th1)
+    var x2 = x3 + t * Math.sin(th1)
+    var y2 = y3 - t * Math.cos(th1)
+    return [
+      a00 * x1 + a01 * y1,      a10 * x1 + a11 * y1,
+      a00 * x2 + a01 * y2,      a10 * x2 + a11 * y2,
+      a00 * x3 + a01 * y3,      a10 * x3 + a11 * y3
+    ]
+  },
+
+  getLength : function() {
+    var segs = this.getSegments()
+    if (segs.arcLength == null) {
+      segs.arcLength = 0
+      var x=0, y=0
+      for (var i=0; i<segs.length; i++) {
+        var args = segs[i][1]
+        if (args.length < 2) continue
+        switch(segs[i][0]) {
+          case 'bezierCurveTo':
+            segs[i][3] = CakeJS.Curves.cubicLength(
+              [x, y], [args[0], args[1]], [args[2], args[3]], [args[4], args[5]])
+            break
+          case 'quadraticCurveTo':
+            segs[i][3] = CakeJS.Curves.quadraticLength(
+              [x, y], [args[0], args[1]], [args[2], args[3]])
+            break
+          case 'lineTo':
+            segs[i][3] = CakeJS.Curves.lineLength(
+              [x, y], [args[0], args[1]])
+            break
+        }
+        if (segs[i][3])
+          segs.arcLength += segs[i][3]
+        x = args[args.length-2]
+        y = args[args.length-1]
+      }
+    }
+    return segs.arcLength
+  },
+
+  pointAngleAt : function(t, config) {
+    var segments = []
+    var segs = this.getSegments()
+    var length = this.getLength()
+    var x = 0, y = 0
+    for (var i=0; i<segs.length; i++) {
+      var seg = segs[i]
+      if (seg[1].length < 2) continue
+      if (seg[0] != 'moveTo') {
+        segments.push([x, y, seg])
+      }
+      x = seg[1][seg[1].length-2]
+      y = seg[1][seg[1].length-1]
+    }
+    if (segments.length < 1)
+      return {point: [x, y], angle: 0 }
+    if (t >= 1) {
+      var rt = 1
+      var seg = segments[segments.length-1]
+    } else if (config && config.discrete) {
+      var idx = Math.floor(t * segments.length)
+      var seg = segments[idx]
+      var rt = 0
+    } else if (config && config.linear) {
+      var idx = t * segments.length
+      var rt = idx - Math.floor(idx)
+      var seg = segments[Math.floor(idx)]
+    } else {
+      var len = t * length
+      var rlen = 0, idx, rt
+      for (var i=0; i<segments.length; i++) {
+        if (rlen + segments[i][2][3] > len) {
+          idx = i
+          rt = (len - rlen) / segments[i][2][3]
+          break
+        }
+        rlen += segments[i][2][3]
+      }
+      var seg = segments[idx]
+    }
+    var angle = 0
+    var cmd = seg[2][0]
+    var args = seg[2][1]
+    switch (cmd) {
+      case 'bezierCurveTo':
+        return CakeJS.Curves.cubicLengthPointAngle([seg[0], seg[1]], [args[0], args[1]], [args[2], args[3]], [args[4], args[5]], rt)
+        break
+      case 'quadraticCurveTo':
+        return CakeJS.Curves.quadraticLengthPointAngle([seg[0], seg[1]], [args[0], args[1]], [args[2], args[3]], rt)
+        break
+      case 'lineTo':
+        x = CakeJS.Curves.linearValue(seg[0], args[0], rt)
+        y = CakeJS.Curves.linearValue(seg[1], args[1], rt)
+        angle = CakeJS.Curves.lineAngle([seg[0], seg[1]], [args[0], args[1]], rt)
+        break
+    }
+    return {point: [x, y], angle: angle }
+  }
+})
+/**
+  Polygon is used for creating paths consisting of straight line
+  segments.
+
+  Attributes:
+    segments - The vertices of the polygon, e.g. [0,0, 1,1, 1,2, 0,1]
+    closePath - Whether to close the path, default is true.
+
+  @param segments The vertices of the polygon.
+  @param closePath Whether to close the path.
+  @param config Optional config hash.
+  */
+CakeJS.Polygon = CakeJS.Klass(CakeJS.Drawable, {
+  segments : [],
+  closePath : true,
+
+  initialize : function(segments, config) {
+    this.segments = segments
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  drawGeometry : function(ctx) {
+    if (!this.segments || this.segments.length < 2) return
+    var s = this.segments
+    ctx.moveTo(s[0], s[1])
+    for (var i=2; i<s.length; i+=2) {
+      ctx.lineTo(s[i], s[i+1])
+    }
+    if (this.closePath)
+      ctx.closePath()
+  },
+
+  isPointInPath : function(px,py) {
+    if (!this.segments || this.segments.length < 2) return false
+    var bbox = this.getBoundingBox()
+    return (px >= bbox[0] && px <= bbox[0]+bbox[2] &&
+            py >= bbox[1] && py <= bbox[1]+bbox[3])
+  },
+
+  getStartPoint : function() {
+    if (!this.segments || this.segments.length < 2)
+      return {point:[0,0], angle:0}
+    var a = 0
+    if (this.segments.length > 2) {
+      a = CakeJS.Curves.lineAngle(this.segments.slice(0,2), this.segments.slice(2,4))
+    }
+    return {point: this.segments.slice(0,2),
+            angle: a}
+  },
+
+  getEndPoint : function() {
+    if (!this.segments || this.segments.length < 2)
+      return {point:[0,0], angle:0}
+    var a = 0
+    if (this.segments.length > 2) {
+      a = CakeJS.Curves.lineAngle(this.segments.slice(-4,-2), this.segments.slice(-2))
+    }
+    return {point: this.segments.slice(-2),
+            angle: a}
+  },
+
+  getMidPoints : function() {
+    if (!this.segments || this.segments.length < 2)
+      return []
+    var segs = this.segments
+    var verts = []
+    for (var i=2; i<segs.length-2; i+=2) {
+      var a = segs.slice(i-2,i)
+      var b = segs.slice(i, i+2)
+      var c = segs.slice(i+2, i+4)
+      var t = 0.5 * (Curves.lineAngle(a,b) + CakeJS.Curves.lineAngle(b,c))
+      verts.push(
+        {point: b, angle: t}
+      )
+    }
+    return verts
+  },
+
+  getBoundingBox : function() {
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    var s = this.segments
+    for (var i=0; i<s.length; i+=2) {
+      var x = s[i], y = s[i+1]
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+    return [minX, minY, maxX-minX, maxY-minY]
+  }
+})
+/**
+  CakeJS.Rectangle is used for creating rectangular paths.
+
+  Uses context.rect(...).
+
+  Attributes:
+    cx, cy, width, height, centered, rx, ry
+
+  If centered is set to true, centers the rectangle on the origin.
+  Otherwise the top-left corner of the rectangle is on the origin.
+
+  @param width Width of the rectangle.
+  @param height Height of the rectangle.
+  @param config Optional config hash.
+  */
+CakeJS.Rectangle = CakeJS.Klass(CakeJS.Drawable, {
+  cx : 0,
+  cy : 0,
+  x2 : 0,
+  y2 : 0,
+  width : 0,
+  height : 0,
+  rx : 0,
+  ry : 0,
+  centered : false,
+
+  initialize : function(width, height, config) {
+    if (width != null) {
+      this.width = width
+      this.height = width
+    }
+    if (height != null) this.height = height
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  /**
+    Creates a rectangular path using ctx.rect(...).
+
+    @param ctx CakeJS.Canvas drawing context.
+    */
+  drawGeometry : function(ctx) {
+    var x = this.cx
+    var y = this.cy
+    var w = (this.width || (this.x2 - x))
+    var h = (this.height || (this.y2 - y))
+    if (w == 0 || h == 0) return
+    if (this.centered) {
+      x -= 0.5*w
+      y -= 0.5*h
+    }
+    if (this.rx || this.ry) {
+      // hahaa, welcome to the undocumented rounded corners path
+      // using bezier curves approximating ellipse quadrants
+      var rx = Math.min(w * 0.5, this.rx || this.ry)
+      var ry = Math.min(h * 0.5, this.ry || rx)
+      var k = 0.5522847498
+      var krx = k*rx
+      var kry = k*ry
+      ctx.moveTo(x+rx, y)
+      ctx.lineTo(x-rx+w, y)
+      ctx.bezierCurveTo(x-rx+w + krx, y, x+w, y+ry-kry, x+w, y+ry)
+      ctx.lineTo(x+w, y+h-ry)
+      ctx.bezierCurveTo(x+w, y+h-ry+kry, x-rx+w+krx, y+h, x-rx+w, y+h)
+      ctx.lineTo(x+rx, y+h)
+      ctx.bezierCurveTo(x+rx-krx, y+h, x, y+h-ry+kry, x, y+h-ry)
+      ctx.lineTo(x, y+ry)
+      ctx.bezierCurveTo(x, y+ry-kry, x+rx-krx, y, x+rx, y)
+      ctx.closePath()
+    } else {
+      if (w < 0) x += w
+      if (h < 0) y += h
+      ctx.rect(x, y, Math.abs(w), Math.abs(h))
+    }
+  },
+
+  /**
+    Returns true if the point x,y is inside this rectangle.
+
+    The x,y point is in user-space coordinates, meaning that e.g. the point
+    5,5 will always be inside the rectangle [0, 0, 10, 10], regardless of the
+    transform on the rectangle.
+
+    @param x X-coordinate of the point.
+    @param y Y-coordinate of the point.
+    @return Whether the point is inside this rectangle.
+    @type boolean
+    */
+  isPointInPath : function(x,y) {
+    x -= this.cx
+    y -= this.cy
+    if (this.centered) {
+      x += this.width/2
+      y += this.height/2
+    }
+    return (x >= 0 && x <= this.width && y >= 0 && y <= this.height)
+  },
+
+  getBoundingBox : function() {
+    var x = this.cx
+    var y = this.cy
+    if (this.centered) {
+      x -= this.width/2
+      y -= this.height/2
+    }
+    return [x,y,this.width,this.height]
+  }
+})
+/**
+  A Spiral is a function graph drawn in polar coordinates from startAngle to
+  endAngle. And the source of all life energy, etc.
+  */
+CakeJS.Spiral = CakeJS.Klass(CakeJS.Drawable, {
+  cx : 0,
+  cy : 0,
+  startRadius : 0,
+  startAngle : 0,
+  endAngle : 0,
+
+  radiusFunction : function(a) {
+    return a
+  },
+
+  initialize : function(endAngle, config) {
+    this.endAngle = endAngle
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  drawGeometry : function(ctx) {
+    var x = this.cx
+    var y = this.cy
+    var a = this.startAngle
+    var r = this.startRadius + this.radiusFunction(a)
+    ctx.moveTo(x+Math.cos(a)*r, y-Math.sin(a)*r)
+    if (this.startAngle < this.endAngle) {
+      a += 0.1
+      r = this.startRadius + this.radiusFunction(a)
+      while (a < this.endAngle) {
+        ctx.lineTo(x+Math.cos(a)*r, y-Math.sin(a)*r)
+        a += 0.1
+        r = this.startRadius + this.radiusFunction(a)
+      }
+    } else {
+      a -= 0.1
+      r = this.startRadius + this.radiusFunction(a)
+      while (a > this.endAngle) {
+        ctx.lineTo(x+Math.cos(a)*r, y-Math.sin(a)*r)
+        a -= 0.1
+        r = this.startRadius + this.radiusFunction(a)
+      }
+    }
+    a = this.endAngle
+    r = this.startRadius + this.radiusFunction(a)
+    ctx.lineTo(x+Math.cos(a)*r, y-Math.sin(a)*r)
+  },
+
+  isPointInPath : function(x, y) {
+    return false
+  }
+})
+/**
+  TextNode is used for drawing text on a canvas.
+
+  Attributes:
+
+    text - The text string to draw.
+    align - Horizontal alignment for the text.
+            'left', 'right', 'center', 'start' or 'end'
+    baseline - Baseline used for the text.
+               'top', 'hanging', 'middle', 'alphabetic', 'ideographic' or 'bottom'
+    asPath - If true, creates a text path instead of drawing the text.
+    pathGeometry - A geometry object the path of which the text follows.
+
+  Example:
+
+    var text = new TextGeometry('The cake is a lie.')
+
+  @param text The text string to draw.
+  @param config Optional config hash.
+  */
+CakeJS.TextNode = CakeJS.Klass(CakeJS.Drawable, {
+  text : 'Text',
+  align : 'start', // 'left' | 'right' | 'center' | 'start' | 'end'
+  baseline : 'alphabetic', // 'top' | 'hanging' | 'middle' | 'alphabetic' |
+                           // 'ideographic' | 'bottom'
+  accuratePicking : false,
+  asPath : false,
+  pathGeometry : null,
+  maxWidth : null,
+  width : 0,
+  height : 20,
+  cx : 0,
+  cy : 0,
+
+  __drawMethodName : 'draw' + CakeJS.CanvasSupport.getTextBackend(),
+  __pickingMethodName : 'drawPickingPath' + CakeJS.CanvasSupport.getTextBackend(),
+
+  initialize : function(text, config) {
+    this.lastText = this.text
+    this.text = text
+    CakeJS.Drawable.initialize.call(this, config)
+  },
+
+  drawGeometry : function(ctx) {
+    this.drawUsing(ctx, this.__drawMethodName)
+  },
+
+  drawPickingPath : function(ctx) {
+    this.drawUsing(ctx, this.__pickingMethodName)
+  },
+
+  drawUsing : function(ctx, methodName) {
+    if (!this.text || this.text.length == 0)
+      return
+    if (this.lastText != this.text || this.lastStyle != ctx.font) {
+      this.dimensions = this.measureText(ctx)
+      this.lastText = this.text
+      this.lastStyle = ctx.font
+    }
+    if (this[methodName])
+      this[methodName](ctx)
+  },
+
+  measureText : function(ctx) {
+    var mn = 'measureText' + CakeJS.CanvasSupport.getTextBackend().capitalize()
+    if (this[mn]) {
+      return this[mn](ctx)
+    } else {
+      return {width: 0, height: 0}
+    }
+  },
+
+  computeXForAlign : function() {
+    if (this.align == 'left') // most hit branch
+      return 0
+    else if (this.align == 'right')
+      return -this.dimensions.width
+    else if (this.align == 'center')
+      return  -this.dimensions.width * 0.5
+  },
+
+  measureTextHTML5 : function(ctx) {
+    // FIXME measureText is retarded
+    return {width: ctx.measureText(this.text).width, height: 20}
+  },
+
+  drawHTML5 : function(ctx) {
+    ctx.fillText(this.text, this.cx, this.cy, this.maxWidth)
+  },
+
+  drawPickingPathHTML5 : function(ctx) {
+    var ascender = 15 // this.dimensions.ascender
+    var ry = this.cy - ascender
+    ctx.rect(this.cx, ry, this.dimensions.width, this.dimensions.height)
+  },
+
+  measureTextMozText : function(ctx) {
+    return {width: ctx.mozMeasureText(this.text), height: 20}
+  },
+
+  drawMozText : function(ctx) {
+    var x = this.cx + this.computeXForAlign()
+    var y = this.cy + 0
+    if (this.pathGeometry) {
+      this.pathGeometry.draw(ctx)
+      ctx.mozDrawTextAlongPath(this.text, this.path)
+    } else {
+      ctx.save()
+      ctx.translate(x,y)
+      if (this.asPath) {
+        ctx.mozPathText(this.text)
+      } else {
+        ctx.mozDrawText(this.text)
+      }
+      ctx.restore()
+    }
+  },
+
+  drawPickingPathMozText : function(ctx) {
+    var x = this.cx + this.computeXForAlign()
+    var y = this.cy + 0
+    if (this.pathGeometry) { // FIXME how to draw a text path along path?
+        this.pathGeometry.draw(ctx)
+        // ctx.mozDrawTextAlongPath(this.text, this.path)
+    } else if (!this.accuratePicking) {
+      var ascender = 15 // this.dimensions.ascender
+      var ry = y - ascender
+      ctx.rect(x, ry, this.dimensions.width, this.dimensions.height)
+    } else {
+      ctx.save()
+      ctx.translate(x,y)
+      ctx.mozPathText(this.text)
+      ctx.restore()
+    }
+  },
+
+  drawDrawString : function(ctx) {
+    var x = this.cx + this.computeXForAlign()
+    var y = this.cy + 0
+    ctx.drawString(x,y, this.text)
+  },
+
+  measureTextPerfectWorld : function(ctx) {
+    return ctx.measureText(this.text)
+  },
+
+  drawPerfectWorld : function(ctx) {
+    if (this.pathGeometry) {
+      this.pathGeometry.draw(ctx)
+      if (this.asPath)
+        ctx.pathTextAlongPath(this.text)
+      else
+        ctx.drawTextAlongPath(this.text)
+    } else if (this.asPath) {
+      ctx.pathText(this.text)
+    } else {
+      ctx.drawText(this.text)
+    }
+  },
+
+  drawPickingPathPerfectWorld : function(ctx) {
+    if (this.accuratePicking) {
+      if (this.pathGeometry) {
+        ctx.pathTextAlongPath(this.text)
+      } else {
+        ctx.pathText(this.text)
+      }
+    } else { // creates a path of text bounding box
+      if (this.pathGeometry) {
+        ctx.textRectAlongPath(this.text)
+      } else {
+        ctx.textRect(this.text)
+      }
+    }
   }
 })
 window.CakeJS = CakeJS;

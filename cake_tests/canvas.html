@@ -6,7 +6,7 @@
 <script type="text/javascript" src="support.js"></script>
 <script language="JavaScript" type="text/javascript">
 /*
-CAKE - Canvas Animation Kit Experiment
+CAKE - CakeJS.Canvas Animation Kit Experiment
 
 Copyright (C) 2007  Ilmari Heikkinen
 
@@ -159,16 +159,14 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.canvas.showFpsHistogram = true
       this.canvas.redrawOnlyWhenChanged = false
       var Klass = window[name];
-      this.effectObject = new CakeJS.Klass(this.canvas, this.controlsElement);
+      this.effectObject = new Klass(this.canvas, this.controlsElement);
       this.canvas.append(this.effectObject.scene);
       this.effectTitle.innerHTML = name;
       this.effectObject.controlPanel.show();
       this.canvas.play();
       if (!noSourceUpdate) {
-        $('sourceText').value = name + ' = CakeJS.Klass(Effect, ' +
-                                Object.toSource(CakeJS.Klass.ancestors.last()) +
-                                ')\n'
-      }
+        $('sourceText').value = name + ' = CakeJS.Klass(Effect, ' + Object.toSource(Klass.ancestors.last()) + ')\n'
+	  }
     }
   })
   Effects.add = function(effect_name) {
@@ -238,7 +236,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       }
       if (!support) {
         var msg = "Your browser doesn't support putImageData."
-        var notSupported = new ElementNode(E('div',
+        var notSupported = new CakeJS.ElementNode(E('div',
           msg,
           {style: {color:'white', textAlign:'center'}}
         ), {x:320, y:240, align:'center', valign:'center'})
@@ -284,7 +282,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function(canvas, controlContainer) {
       Effect.initialize.call(this, canvas, controlContainer)
       this.canvas.fill = 'rgba(0,0,0,0.1)'
-      var g1 = new Gradient({
+      var g1 = new CakeJS.Gradient({
         endX : 0, endY : 0,
         endRadius : 60,
         type : 'radial',
@@ -303,9 +301,9 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makeRect : function(offset, color) {
-      var scene = new CanvasNode()
-      var rect = new Rectangle()
-      var elem = new ElementNode(
+      var scene = new CakeJS.CanvasNode()
+      var rect = new CakeJS.Rectangle()
+      var elem = new CakeJS.ElementNode(
         E('div', "Rectangle", {style: {color:'white'}}) )
       elem.valign = 'bottom'
       elem.align = 'right'
@@ -373,12 +371,12 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.scene.strokeWidth = 3
       this.scene.rotation = [0.05, this.canvas.width/2, this.canvas.height/2]
       this.scene.compositeOperation = 'lighter'
-      this.scene.fill = new Gradient(this.circleGradient)
+      this.scene.fill = new CakeJS.Gradient(this.circleGradient)
       this.scene.stroke = '#ffeeaa'
     },
 
     makeCircle : function(offset) {
-      var circle = new Circle(15)
+      var circle = new CakeJS.Circle(15)
       circle.circles = this
       circle.offset = offset
       circle.addFrameListener(this.circleMotion)
@@ -407,12 +405,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     initialize : function(canvas, controlContainer) {
       Effect.initialize.call(this, canvas, controlContainer)
-      this.bgCircle = new Circle(120)
+      this.bgCircle = new CakeJS.Circle(120)
       this.bgCircle.x = 320
       this.bgCircle.y = 240
       this.bgCircle.zIndex = -1
       this.bgCircle.stroke = false
-      this.bgCircle.fill = new Gradient({
+      this.bgCircle.fill = new CakeJS.Gradient({
         type : 'radial',
         startX : 0, startY: 0,
         endX : 0, endY : 0,
@@ -424,25 +422,25 @@ OTHER DEALINGS IN THE SOFTWARE.
           [1, [0,0,0,0]]
         ]
       })
-      this.clipRect = new Circle()
+      this.clipRect = new CakeJS.Circle()
       this.clipRect.x = 320
       this.clipRect.y = 240
       this.clipRect.clip = true
       this.clipRect.stroke = true
       this.clipRect.fill = false
       this.clipRect.radius = 100
-      this.rect = new Rectangle()
+      this.rect = new CakeJS.Rectangle()
       this.rect.width = 150
       this.rect.height = 40
       this.rect.fill = true
       this.rect.stroke = false
-      this.rect2 = new Rectangle()
+      this.rect2 = new CakeJS.Rectangle()
       this.rect2.width = 40
       this.rect2.height = 150
       this.rect2.fill = true
       this.rect2.stroke = false
       this.rect2.rotation = Math.PI
-      this.rectTop = new CanvasNode()
+      this.rectTop = new CakeJS.CanvasNode()
       this.clipRect.addFrameListener(function(t) {
         this.opacity = 0.7 + 0.3*Math.sin(t / 800)
       })
@@ -454,7 +452,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.rectTop.append(this.rect, this.rect2)
       this.clipRect.append(this.rectTop)
       this.scene.append(this.clipRect, this.bgCircle)
-      var g = new Gradient({
+      var g = new CakeJS.Gradient({
         type : 'radial',
         endX : 0, endY : 0,
         endRadius : 150,
@@ -495,8 +493,8 @@ OTHER DEALINGS IN THE SOFTWARE.
         }.bind(this), 200)
         return
       }
-      this.imageNode = new ImageNode(this.image)
-      this.topNode = new CanvasNode()
+      this.imageNode = new CakeJS.ImageNode(this.image)
+      this.topNode = new CakeJS.CanvasNode()
       this.topNode.stroke = 'rgba(0,255,255,0.5)'
       this.topNode.strokeWidth = 10
       this.imageNode.stroke = this.stroke
@@ -544,7 +542,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ['quadraticCurveTo', [0,0, 0, -50]]
       ])
       rect.scale = 2
-      this.rectTop = new CanvasNode()
+      this.rectTop = new CakeJS.CanvasNode()
       var th = this
       this.rectTop.addFrameListener(function(t) {
         rect.fill = th.fill
@@ -556,7 +554,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       })
       this.rectTop.append(rect)
       this.scene.append(this.rectTop)
-      var g = new Gradient({
+      var g = new CakeJS.Gradient({
         type : 'radial',
         endX : 0, endY : 0,
         endRadius : 150,
@@ -578,7 +576,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     initialize : function(canvas, controlContainer) {
       Effect.initialize.call(this, canvas, controlContainer)
-      var g = new Gradient({
+      var g = new CakeJS.Gradient({
         type : 'radial',
         endX : 0, endY : 0,
         startRadius : 5,
@@ -589,25 +587,25 @@ OTHER DEALINGS IN THE SOFTWARE.
           [1, 'rgba(0,0,0,0)']
         ]
       })
-      var g2 = new Gradient({
+      var g2 = new CakeJS.Gradient({
         endX : 200, endY : 0,
         colorStops : [
           [0, '#ff0000'],
           [1, 'rgba(255,0,0,0)']
         ]
       })
-      this.redNode = new Rectangle(200,5)
+      this.redNode = new CakeJS.Rectangle(200,5)
       this.redNode.y = -2.5
       this.redNode.fill = g2
       this.redNode.zIndex = 10
-      this.greenNode = new Circle(100)
+      this.greenNode = new CakeJS.Circle(100)
       this.greenNode.fill = g
       this.greenNode.zIndex = 5
-      this.yellowNode = new Circle(50)
+      this.yellowNode = new CakeJS.Circle(50)
       this.yellowNode.scale = [0.7, 1.2]
       this.yellowNode.fill = '#ff0000'
       this.yellowNode.zIndex = 1
-      this.topNode = new CanvasNode()
+      this.topNode = new CakeJS.CanvasNode()
       this.topNode.append(this.redNode, this.greenNode, this.yellowNode)
       this.topNode.addFrameListener(function(t) {
         this.x = 320 + Math.sin(t / 300) * 150
@@ -635,7 +633,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function(aniCanvas, controlContainer) {
       Effect.initialize.apply(this, arguments)
       this.cloudImage = Object.loadImage('cloud_mask.png')
-      this.bgGradient = new Gradient({
+      this.bgGradient = new CakeJS.Gradient({
         endX : -20, endY : 500,
         colorStops : [
           [0, [10, 0, 50]],
@@ -654,12 +652,12 @@ OTHER DEALINGS IN THE SOFTWARE.
           var h2 = h - 30
           if (h2 < 0)
             h2 += 360
-          aniCanvas.fill.colorStops[0][1] = Colors.hsv2rgb(h, s, v)
-          aniCanvas.fill.colorStops[1][1] = Colors.hsv2rgb(h2, s, v)
+          aniCanvas.fill.colorStops[0][1] = CakeJS.Colors.hsv2rgb(h, s, v)
+          aniCanvas.fill.colorStops[1][1] = CakeJS.Colors.hsv2rgb(h2, s, v)
           aniCanvas.fill.compiled = false
         }
       })
-      this.cloudMask = new ImageNode(this.cloudImage)
+      this.cloudMask = new CakeJS.ImageNode(this.cloudImage)
       this.cloudMask.zIndex = -1
       this.cloudMask.opacity = 0.6
       this.cloudMask.visible = this.clouds
@@ -672,7 +670,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         this.makeStar(255, 20, 200, 23, 250, 100),
         this.makeStar(200, 75, 200, 26, 450, 360)
       )
-      this.curves = new CanvasNode()
+      this.curves = new CakeJS.CanvasNode()
       this.curves.visible = this.starCross
       this.curves.append(
         this.makeCurve(255,0,200,0.2, Math.PI * 0.25),
@@ -709,7 +707,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ['bezierCurveTo', [-100, -100, 0, 0, 0, 0]],
         ['bezierCurveTo', [0, 0, -100, 100, -180, 100]]
       ])
-      curve.fill = new Gradient({
+      curve.fill = new CakeJS.Gradient({
         type : 'radial',
         endY : 0, endX : 0,
         endRadius : 150,
@@ -726,7 +724,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makeStar : function(r,g,b, radius, x, y) {
-      var g1 = new Gradient({
+      var g1 = new CakeJS.Gradient({
         type : 'radial',
         endX : 0, endY : 0,
         startRadius : 0,
@@ -740,7 +738,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           [1,   [r,g,b, 0]]
         ]
       })
-      var g2 = new Gradient({
+      var g2 = new CakeJS.Gradient({
         type : 'radial',
         endX : 0, endY : 0,
         startRadius : 0,
@@ -753,14 +751,14 @@ OTHER DEALINGS IN THE SOFTWARE.
           [1,   [r,g,b, 0]]
         ]
       })
-      var star = new CanvasNode()
-      var spokes = new CanvasNode()
+      var star = new CakeJS.CanvasNode()
+      var spokes = new CakeJS.CanvasNode()
       spokes.fill = g1
-      var spoke1 = new Rectangle(radius*2,1)
+      var spoke1 = new CakeJS.Rectangle(radius*2,1)
       spoke1.centered = true
-      var spoke2 = new Rectangle(1,radius*2)
+      var spoke2 = new CakeJS.Rectangle(1,radius*2)
       spoke2.centered = true
-      var glow = new Circle(radius / 2)
+      var glow = new CakeJS.Circle(radius / 2)
       glow.fill = g2
       glow.zIndex = 1
       spokes.append(spoke1, spoke2)
@@ -841,7 +839,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       var bgColor = 'rgba(80,70,60,1)'
       aniCanvas.fill = this.transparentBackground ? false : bgColor
       this.loadImages()
-      this.topNode = new CanvasNode()
+      this.topNode = new CakeJS.CanvasNode()
       var t0 = 0
       var th = this
       this.topNode.addFrameListener(function(t) {
@@ -856,33 +854,33 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makePolaroid : function(image, z) {
-      var polaroid = new CanvasNode()
+      var polaroid = new CakeJS.CanvasNode()
       polaroid.cursor = 'pointer'
       polaroid.addEventListener('click', function() {
         window.open(image.src, '_blank')
       }, false)
-      var imageNode = new ImageNode(image)
+      var imageNode = new CakeJS.ImageNode(image)
       imageNode.x = 8
       imageNode.y = 8
-      var imageShadow = new Rectangle()
+      var imageShadow = new CakeJS.Rectangle()
       imageShadow.stroke = 'rgba(0,0,0,0.5)'
       imageShadow.x = 8
       imageShadow.y = 8
       imageShadow.stroke = true
       imageShadow.strokeWidth = 2
       imageShadow.zIndex = -0.5
-      var hilight = new Rectangle()
+      var hilight = new CakeJS.Rectangle()
       hilight.x = 8
       hilight.y = 8
       hilight.fill = 'rgba(255,255,0,0.2)'
       hilight.zIndex = 2
       hilight.compositeOperation = 'lighter'
       hilight.visible = false
-      var matte = new Rectangle(10, 10)
+      var matte = new CakeJS.Rectangle(10, 10)
       matte.zIndex = -1
       matte.fill = true
       var matteColor = 'rgba(220,215,210,1)'
-      var matteGradient = new Gradient({
+      var matteGradient = new CakeJS.Gradient({
         startY : 320,
         endX : 0, endY : 368,
         colorStops : [
@@ -896,7 +894,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ]
       })
       var strokeColor = 'rgba(255,255,255,0.1)'
-      var strokeGradient = new Gradient({
+      var strokeGradient = new CakeJS.Gradient({
         startY : 0,
         endX : 0, endY : 368,
         colorStops : [
@@ -938,7 +936,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       if (Object.isImageLoaded(image))
         onload()
       polaroid.append(matte, imageShadow, imageNode, text, text2, hilight)
-      var topNode = new CanvasNode()
+      var topNode = new CakeJS.CanvasNode()
       topNode.append(polaroid)
       var t0
       var th = this
@@ -1027,7 +1025,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       Effect.initialize.apply(this, arguments)
       this.canvas.fill = false
       var canvasElem = E.canvas(this.canvas.width, this.canvas.height)
-      var bgCanvas = this.bgCanvas = new Canvas(
+      var bgCanvas = this.bgCanvas = new CakeJS.Canvas(
         canvasElem, {
           isPlaying : false,
           clear : false,
@@ -1035,11 +1033,11 @@ OTHER DEALINGS IN THE SOFTWARE.
           redrawOnlyWhenChanged : true
         }
       )
-      this.bgNode = new ImageNode(this.bgCanvas.canvas)
+      this.bgNode = new CakeJS.ImageNode(this.bgCanvas.canvas)
       this.scene.append(this.bgNode)
       this.bgNode.addFrameListener(bgCanvas.onFrame.bind(bgCanvas))
       this.bgNode.zIndex = -1
-      var rect = new Rectangle(100,100)
+      var rect = new CakeJS.Rectangle(100,100)
       rect.fill = [0,0,0,0.5]
       var scene = this.scene
       rect.cX = rect.ncX = 320
@@ -1106,11 +1104,11 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function(canvas, cc) {
       Effect.initialize.call(this, canvas, cc)
       this.canvas.fill = 'white'
-      var rect = new Rectangle(640,480, {
+      var rect = new CakeJS.Rectangle(640,480, {
         fillStyle : 'rgba(255,255,255,0.8)',
         zIndex : -1
       })
-      var circle = new Circle(10, {
+      var circle = new CakeJS.Circle(10, {
         fill : 'rgba(155, 0, 0, 1)',
         x : 0,
         y : 490,
@@ -1155,7 +1153,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         if (Math.floor(this.scale * 15) != this.lastScale) {
           this.lastScale = Math.floor(this.scale * 15)
           if (Math.random() < 0.3) {
-            var circle = new Circle(10, {
+            var circle = new CakeJS.Circle(10, {
               fill : this.fill,
               x : this.x,
               y : this.y,
@@ -1200,12 +1198,12 @@ OTHER DEALINGS IN THE SOFTWARE.
       var scaled3 = this.makeRect()
       scaled3.x = 180
       scaled3.scale = [2, 1]
-      var nested1 = new CanvasNode()
+      var nested1 = new CakeJS.CanvasNode()
       nested1.x = 120
       nested1.y = 140
-      var n2 = new CanvasNode()
+      var n2 = new CakeJS.CanvasNode()
       n2.rotation = Math.PI/2.8
-      var n3 = new CanvasNode()
+      var n3 = new CakeJS.CanvasNode()
       n3.scale = 4
       var r = this.makeRect()
       r.cx = 50
@@ -1290,7 +1288,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           hand.origFillStyle = this.origFillStyle
         }
       })
-      var headband = new CanvasNode()
+      var headband = new CakeJS.CanvasNode()
       headband.x = 220
       headband.y = 0
       headband.rotation = Math.PI/8
@@ -1312,14 +1310,14 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makeRect : function() {
-      var r = new Rectangle(20, 20, {fill: true, fillStyle: 'white'})
+      var r = new CakeJS.Rectangle(20, 20, {fill: true, fillStyle: 'white'})
       r.origFillStyle = 'white'
       r.addFrameListener(this.hoverRed)
       return r
     },
 
     makeCircle : function(x, y) {
-      var r = new Circle(50, {x: x, y: y})
+      var r = new CakeJS.Circle(50, {x: x, y: y})
       r.stroke = 'black'
       r.strokeWidth = 8
       r.origFillStyle = 'white'
@@ -1343,9 +1341,9 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function(canvas, cc) {
       Effect.initialize.call(this, canvas, cc)
       this.canvas.fillStyle = [255, 255, 255, 1]
-      this.svgScene = new CanvasNode()
+      this.svgScene = new CakeJS.CanvasNode()
       this.scene.appendChild(this.svgScene)
-      this.fileInfo = new ElementNode(E('div'), {
+      this.fileInfo = new CakeJS.ElementNode(E('div'), {
         align: 'right', valign: 'bottom',
         x: 634, y: 480
       })
@@ -1399,7 +1397,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       var loading = this.loading
       var th = this
       var cc = document.defaultView.getComputedStyle(this.canvas.canvas,'').color
-      SVGParser.load(filename, {
+      CakeJS.SVGParser.load(filename, {
         width:  640,
         height: 480,
         fontSize: 12,
@@ -1460,7 +1458,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         this.fileNotice.innerHTML = ''
       }
       this.svgScene.removeAllChildren()
-      var loading = new ElementNode(E('div',
+      var loading = new CakeJS.ElementNode(E('div',
         'Loading '+filename+', please wait...'))
       loading.content.style.color = 'black'
       loading.align = 'center'
@@ -1686,7 +1684,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           'svg_11_full/svg/color-prop-01-b.svg',
           'svg_11_full/svg/color-prop-02-f.svg',
           'svg_11_full/svg/color-prop-03-t.svg'
-        ], {title: 'SVG 1.1 Full: Colors<br>(Fail: prof-01)'}
+        ], {title: 'SVG 1.1 Full: CakeJS.Colors<br>(Fail: prof-01)'}
       ],
       ['file',
         [
@@ -1902,10 +1900,10 @@ OTHER DEALINGS IN THE SOFTWARE.
       canvas.recording = true
       var smallCanvas = E.canvas(320, 240)
       var doc = "This shows up alright since it's really a DOM node."
-      var en = new ElementNode(smallCanvas)
+      var en = new CakeJS.ElementNode(smallCanvas)
       en.x = 160
       en.y = 120
-      var ctx = CanvasSupport.getContext(smallCanvas, '2d')
+      var ctx = CakeJS.CanvasSupport.getContext(smallCanvas, '2d')
       this.scene.append(en)
       this.scene.append(circles.scene)
       var frames = []
@@ -1942,7 +1940,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     playRecording : function(ctx, recording) {
       ctx.save()
         ctx.scale(0.5, 0.5)
-        RecordingContext.play(ctx, recording)
+        CakeJS.RecordingContext.play(ctx, recording)
       ctx.restore()
     }
   })
@@ -2111,7 +2109,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     createSummoningCircle : function(x, y) {
-      var c = new Circle(1, {x: x, y: y, stroke:'cyan'})
+      var c = new CakeJS.Circle(1, {x: x, y: y, stroke:'cyan'})
       var p = new Polygon([])
       p.stroke = true
       for (var i=0; i<6; i++) {
@@ -2122,19 +2120,19 @@ OTHER DEALINGS IN THE SOFTWARE.
       p2.scale = 0.8
       p.append(p2)
       p.strokeWidth = 0.02
-      p.append(new Circle(0.2, {x: 1, y: 0}))
-      p.append(new Circle(0.2, {x: Math.cos(2*Math.PI/3), y: Math.sin(2*Math.PI/3)}))
-      p.append(new Circle(0.2, {x: Math.cos(-2*Math.PI/3), y: Math.sin(-2*Math.PI/3)}))
-      p.append(new Circle(0.25, {x: 1, y: 0}))
-      p.append(new Circle(0.25, {x: Math.cos(2*Math.PI/3), y: Math.sin(2*Math.PI/3)}))
-      p.append(new Circle(0.25, {x: Math.cos(-2*Math.PI/3), y: Math.sin(-2*Math.PI/3)}))
-      p.append(new Circle(0.83, {strokeWidth: 0.06}))
-      p2.append(new Line(0,0,p.segments[0],p.segments[1]))
-      p2.append(new Line(0,0,p.segments[2],p.segments[3]))
-      p2.append(new Line(0,0,p.segments[4],p.segments[5]))
-      p2.append(new Line(0,0,p.segments[6],p.segments[7]))
-      p2.append(new Line(0,0,p.segments[8],p.segments[9]))
-      p2.append(new Line(0,0,p.segments[10],p.segments[11]))
+      p.append(new CakeJS.Circle(0.2, {x: 1, y: 0}))
+      p.append(new CakeJS.Circle(0.2, {x: Math.cos(2*Math.PI/3), y: Math.sin(2*Math.PI/3)}))
+      p.append(new CakeJS.Circle(0.2, {x: Math.cos(-2*Math.PI/3), y: Math.sin(-2*Math.PI/3)}))
+      p.append(new CakeJS.Circle(0.25, {x: 1, y: 0}))
+      p.append(new CakeJS.Circle(0.25, {x: Math.cos(2*Math.PI/3), y: Math.sin(2*Math.PI/3)}))
+      p.append(new CakeJS.Circle(0.25, {x: Math.cos(-2*Math.PI/3), y: Math.sin(-2*Math.PI/3)}))
+      p.append(new CakeJS.Circle(0.83, {strokeWidth: 0.06}))
+      p2.append(new CakeJS.Line(0,0,p.segments[0],p.segments[1]))
+      p2.append(new CakeJS.Line(0,0,p.segments[2],p.segments[3]))
+      p2.append(new CakeJS.Line(0,0,p.segments[4],p.segments[5]))
+      p2.append(new CakeJS.Line(0,0,p.segments[6],p.segments[7]))
+      p2.append(new CakeJS.Line(0,0,p.segments[8],p.segments[9]))
+      p2.append(new CakeJS.Line(0,0,p.segments[10],p.segments[11]))
       p2.animate("rotation", 0, Math.PI, 500, "sine")
       p.animate("scale", 1, 77, 500, "sproing")
       p.animate("rotation", 0, -0.5*Math.PI, 500, "sine")
@@ -2212,8 +2210,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       Effect.initialize.apply(this, arguments)
       this.canvas.fill = 'rgba(0,0,20,0.15)'
       this.scene.compositeOperation = 'lighter'
-      var rect = new Rectangle(10, 40, {centered:true})
-      var g = new Gradient({
+      var rect = new CakeJS.Rectangle(10, 40, {centered:true})
+      var g = new CakeJS.Gradient({
         type : 'radial',
         endRadius : 20,
         colorStops : [
@@ -2232,12 +2230,12 @@ OTHER DEALINGS IN THE SOFTWARE.
       rect.addFrameListener(function(t,dt) {
         var rt = (t / 5000)%1
         if (this.effect.constantSpeed) {
-          var p = Curves.cubicLengthPointAngle(cps[0],cps[1],cps[2],cps[3], rt)
+          var p = CakeJS.Curves.cubicLengthPointAngle(cps[0],cps[1],cps[2],cps[3], rt)
           var point = p.point
           var angle = p.angle
         } else {
-          var point = Curves.cubicPoint(cps[0],cps[1],cps[2],cps[3], rt)
-          var angle = Curves.cubicAngle(cps[0],cps[1],cps[2],cps[3], rt)
+          var point = CakeJS.Curves.cubicPoint(cps[0],cps[1],cps[2],cps[3], rt)
+          var angle = CakeJS.Curves.cubicAngle(cps[0],cps[1],cps[2],cps[3], rt)
         }
         this.x = point[0]
         this.y = point[1]
@@ -2247,7 +2245,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       var i = 0
       var focused = false
       cps.forEach(function(p) {
-        var cp = new Rectangle(
+        var cp = new CakeJS.Rectangle(
           10,10, {centered:true, fill: 'rgba(40,30,0,0.3)', x:p[0], y:p[1], zIndex:1}
         )
         cp.index = i
@@ -2309,11 +2307,11 @@ OTHER DEALINGS IN THE SOFTWARE.
       Effect.initialize.apply(this, arguments)
       var curve = [[320,50], [440,400], [150, 300], [490,300], [200,400]]
       this.curve = []
-      this.spline = new CatmullRomSpline(this.curve,
+      this.spline = new CakeJS.CatmullRomSpline(this.curve,
         {stroke:'white',
          fill:this.unfocusedColor,
          zIndex : -1, loop : this.loop})
-      var rect = this.rect = new CatmullRomSpline(this.curve, {
+      var rect = this.rect = new CakeJS.CatmullRomSpline(this.curve, {
          fill:this.focusedColor,
          zIndex : 0, loop : this.loop,
          scale : 0.15
@@ -2366,7 +2364,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     addControlPoint : function(x,y) {
-      var c = new Circle(10, {fill:this.unfocusedColor})
+      var c = new CakeJS.Circle(10, {fill:this.unfocusedColor})
       c.x = x
       c.y = y
       c.index = this.curve.length
@@ -2376,7 +2374,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       var ce = E('div')
       E.append(ce, c.xElem, ', ', c.yElem)
       ce.style.color = 'white'
-      c.append(new ElementNode(ce, {x:10,y:10}))
+      c.append(new CakeJS.ElementNode(ce, {x:10,y:10}))
       c.addEventListener('mousedown', function() {
         if (this.effect.focused)
           this.effect.focused.fill = this.effect.unfocusedColor
@@ -2417,7 +2415,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function() {
       Effect.initialize.apply(this, arguments)
       var curve = [[320,50], [440,400], [150, 300], [490,300], [200,400]]
-      this.spline = new CatmullRomSpline(
+      this.spline = new CakeJS.CatmullRomSpline(
         curve.map(function(xy){ return [xy[0]-320, xy[1]-240] }),
         {stroke:'white',
          fill:this.unfocusedColor,
@@ -2432,9 +2430,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     makeTransformWidget : function(obj) {
       var bb = obj.getBoundingBox()
-      var w = new CanvasNode()
-      var obj_container = new CanvasNode({zIndex:-1})
-      var obj_c2 = new CanvasNode({zIndex:-1})
+      var w = new CakeJS.CanvasNode()
+      var obj_container = new CakeJS.CanvasNode({zIndex:-1})
+      var obj_c2 = new CakeJS.CanvasNode({zIndex:-1})
       obj_c2.appendChild(obj)
       obj_container.append(obj_c2)
       obj_container.transformList = []
@@ -2446,35 +2444,35 @@ OTHER DEALINGS IN THE SOFTWARE.
       ]
       w.append(obj_container)
 
-      var origin = new CanvasNode(
+      var origin = new CakeJS.CanvasNode(
         {stroke:'white', compositeOperation:'xor', strokeWidth:1})
-      var originHandle = new Circle(10, {
+      var originHandle = new CakeJS.Circle(10, {
         zIndex : 2,
         strokeWidth: 2
       })
       origin.append(originHandle)
-      origin.append(new Line(-4, 0, 4, 0))
-      origin.append(new Line(0, -4, 0, 4))
-      var rotwheel = new Circle(30, {
+      origin.append(new CakeJS.Line(-4, 0, 4, 0))
+      origin.append(new CakeJS.Line(0, -4, 0, 4))
+      var rotwheel = new CakeJS.Circle(30, {
         zIndex: 1.5,
         strokeWidth: 1
       })
-      var rotline = new Line(0,0,0,0,{visible: false})
+      var rotline = new CakeJS.Line(0,0,0,0,{visible: false})
       rotline.zIndex = 2
-      var refline = new Line(0,0,0,0)
+      var refline = new CakeJS.Line(0,0,0,0)
       refline.zIndex = 1
       rotline.append(refline)
-      var oline = new Line(0,0,0,0,{strokeWidth:2})
+      var oline = new CakeJS.Line(0,0,0,0,{strokeWidth:2})
       rotline.append(oline)
       origin.append(rotline, rotwheel)
       w.append(origin)
-      var cr = new CanvasNode({
+      var cr = new CakeJS.CanvasNode({
         stroke: 'white',
         strokeWidth: 1,
         compositeOperation : 'xor'
       })
-      cr.append(new Line(-15, 0, 15, 0))
-      cr.append(new Line(0, -15, 0, 15))
+      cr.append(new CakeJS.Line(-15, 0, 15, 0))
+      cr.append(new CakeJS.Line(0, -15, 0, 15))
       obj_container.append(cr)
       originHandle.addEventListener('drag', function() {
         origin.x = this.root.mouseX - origin.parent.currentMatrix[4]
@@ -2504,7 +2502,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           if (i[0] == 'rotate') s -= i[1][0]
           return s
         }, 0)
-        this.rotationStartAngle = Curves.lineAngle([cx,cy], [x,y])
+        this.rotationStartAngle = CakeJS.Curves.lineAngle([cx,cy], [x,y])
         rotline.visible = true
         refline.x2 = rotline.x2 = x-cx
         refline.y2 = rotline.y2 = y-cy
@@ -2522,7 +2520,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         rotline.x2 = x-cx
         rotline.y2 = y-cy
         var o = (-this.originalRotation+this.rotationStartAngle)
-        var a = Curves.lineAngle([cx,cy], [x,y])
+        var a = CakeJS.Curves.lineAngle([cx,cy], [x,y])
         var d = (a - this.rotationStartAngle)
         var od = Math.abs((a - (this.zeroRotation+o)) % (2*Math.PI))
         var rot = this.originalRotation + d
@@ -2537,7 +2535,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       rotwheel.addEventListener('dragend', function() {
         rotline.visible = false
       }, false)
-      var box = new Rectangle(bb[2], bb[3], {
+      var box = new CakeJS.Rectangle(bb[2], bb[3], {
         zIndex : 0,
         cx:bb[0], cy:bb[1],
         stroke:'white',
@@ -2574,15 +2572,15 @@ OTHER DEALINGS IN THE SOFTWARE.
       cornerPoints.right = []
       for (var i=0; i<cornerPoints.length; i++) {
         var p = cornerPoints[i]
-        var cp = new Circle(5, {
+        var cp = new CakeJS.Circle(5, {
           x:p[0], y:p[1],
           zIndex: 1,
           stroke:'white',
           compositeOperation:'xor'
         })
         cp.addEventListener('drag', function(ev) {
-          var im = CanvasSupport.tInvertMatrix(obj_container.currentMatrix)
-          var xy = CanvasSupport.tMatrixMultiplyPoint(im, this.root.mouseX, this.root.mouseY)
+          var im = CakeJS.CanvasSupport.tInvertMatrix(obj_container.currentMatrix)
+          var xy = CakeJS.CanvasSupport.tMatrixMultiplyPoint(im, this.root.mouseX, this.root.mouseY)
           var x = xy[0] - box.x
           var y = xy[1] - box.y
           if (this.hside == 'left') {
@@ -2631,7 +2629,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function(c,cc) {
       Effect.initialize.apply(this, arguments)
       this.canvas.fill = 'white'
-      SVGParser.load('cakenu2.svg', {
+      CakeJS.SVGParser.load('cakenu2.svg', {
         width: 640,
         height: 480,
         onSuccess: this.initDesign.bind(this),
@@ -2679,19 +2677,19 @@ OTHER DEALINGS IN THE SOFTWARE.
       this.screenClip.clip = true
       this.screenClip.fill = false
      
-      var bottomLayer = new Canvas(E.canvas(640, 480), {
+      var bottomLayer = new CakeJS.Canvas(E.canvas(640, 480), {
         isPlaying : false,
         changed : true,
         redrawOnlyWhenChanged : true
       })
-      this.bottomImage = new ImageNode(bottomLayer.canvas, {zIndex : -1})
+      this.bottomImage = new CakeJS.ImageNode(bottomLayer.canvas, {zIndex : -1})
       
-      var topLayer = new Canvas(E.canvas(640, 480), {
+      var topLayer = new CakeJS.Canvas(E.canvas(640, 480), {
         isPlaying : false,
         changed : true,
         redrawOnlyWhenChanged : true
       })
-      this.topImage = new ImageNode(topLayer.canvas, {zIndex : 1})
+      this.topImage = new CakeJS.ImageNode(topLayer.canvas, {zIndex : 1})
 
       topLayer.scale = bottomLayer.scale = this.scene.scale
       this.topImage.scale = this.bottomImage.scale = 1/this.scene.scale
@@ -2703,12 +2701,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
       var bb = this.screenClip.getBoundingBox()
       var ce = E.canvas(Math.ceil(bb[2]),Math.ceil(bb[3]))
-      var canvas = new Canvas(ce, {isPlaying:false})
+      var canvas = new CakeJS.Canvas(ce, {isPlaying:false})
       this.circles = new Circles(canvas, this.controlContainer)
-      var tn = new CanvasNode()
+      var tn = new CakeJS.CanvasNode()
       tn.append(this.circles.scene)
       canvas.append(tn)
-      var top = new ImageNode(ce)
+      var top = new CakeJS.ImageNode(ce)
       top.addFrameListener(canvas.onFrame.bind(canvas))
       top.x += Math.floor(bb[0]) - 1
       top.y += Math.floor(bb[1])
@@ -2722,7 +2720,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         }
       })
       ta.value = Object.toSource(Circles.prototype)
-      var en = new ElementNode(ta)
+      var en = new CakeJS.ElementNode(ta)
       this.sourceText = en
 //       this.sourceArea.append(en)
 //       this.sourceArea.display = 'none'
@@ -2754,19 +2752,19 @@ OTHER DEALINGS IN THE SOFTWARE.
     },
 
     makeSoundButton : function(src, x, y) {
-      var cn = new CanvasNode({x:x, y:y})
-      var dragHandle = new Circle(10, {fill: '#dddddd', x:40, y: -40, opacity: 0.8, cursor: 'move'})
+      var cn = new CakeJS.CanvasNode({x:x, y:y})
+      var dragHandle = new CakeJS.Circle(10, {fill: '#dddddd', x:40, y: -40, opacity: 0.8, cursor: 'move'})
       dragHandle.when('drag', function(ev) {
         cn.x += ev.dx
         cn.y += ev.dy
       })
-      var c = new Circle(40, {fill: '#dddddd'})
+      var c = new CakeJS.Circle(40, {fill: '#dddddd'})
       c.opacity = 0.8
       c.cursor = 'pointer'
       c.when('mouseover', function(){ this.opacity = 1 })
       c.when('mouseout', function(){ this.opacity = 0.8 })
-      var el = new ElementNode(src, {color: 'white', x:50, valign:'center'})
-      var elbg = new Rectangle(100, 20, {x:40, y:-10, rx:10, zIndex:-1, fill:'#33363C', opacity:0.8})
+      var el = new CakeJS.ElementNode(src, {color: 'white', x:50, valign:'center'})
+      var elbg = new CakeJS.Rectangle(100, 20, {x:40, y:-10, rx:10, zIndex:-1, fill:'#33363C', opacity:0.8})
       elbg.afterFrame(1, function(){
         this.width = el.eWidth+20
       })
@@ -2774,14 +2772,14 @@ OTHER DEALINGS IN THE SOFTWARE.
       var play = new Polygon([30, 0, -20, -20, -20, 20], {fill: 'black', opacity: 0.3})
       a.when('ready', function(){ play.animateTo('opacity', 1, 800, 'square') })
       a.when('error', function(){
-        play.append(new Rectangle(50, 10, {fill:'darkred', absoluteOpacity: 1, centered: true, rotation: Math.PI/4}))
-        play.append(new Rectangle(50, 10, {fill:'darkred', absoluteOpacity: 1, centered: true, rotation: -Math.PI/4}))
+        play.append(new CakeJS.Rectangle(50, 10, {fill:'darkred', absoluteOpacity: 1, centered: true, rotation: Math.PI/4}))
+        play.append(new CakeJS.Rectangle(50, 10, {fill:'darkred', absoluteOpacity: 1, centered: true, rotation: -Math.PI/4}))
         c.addEventListener('click', function(ev) { return false }, true)
       })
-      var pause = new CanvasNode({fill: 'black', visible: false})
+      var pause = new CakeJS.CanvasNode({fill: 'black', visible: false})
       pause.append(
-        new Rectangle(18, 40, {centered: true, x: -12}),
-        new Rectangle(18, 40, {centered: true, x: 12})
+        new CakeJS.Rectangle(18, 40, {centered: true, x: -12}),
+        new CakeJS.Rectangle(18, 40, {centered: true, x: 12})
       )
       c.append(play, pause, a)
       cn.append(c, el, elbg, dragHandle)
@@ -2810,19 +2808,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     initialize : function() {
       Effect.initialize.apply(this, arguments)
-      var c = new Circle(20, {fill: [192,192,192,1], stroke: 'gray'})
-      var move = new Timeline()
+      var c = new CakeJS.Circle(20, {fill: [192,192,192,1], stroke: 'gray'})
+      var move = new CakeJS.Timeline()
       move.addKeyframe(0, {x: 0, y: 0})
       move.addKeyframe(2000, {x: 100, y: 200}, 'sine')
       move.addKeyframe(4000, {x: 100, y: 200}, 'set')
       move.addKeyframe(7000, {x: 500, y: 200}, 'sine')
       c.addTimeline(move)
-      var shape = new Timeline()
+      var shape = new CakeJS.Timeline()
       shape.addKeyframe(1600, {radius: 20, strokeWidth: 1})
       shape.addKeyframe(3000, {radius: 40, strokeWidth: 1}, 'sproing')
       shape.addKeyframe(4000, {radius: 40, strokeWidth: 10}, 'sproing')
       c.addTimeline(shape)
-      var color = new Timeline()
+      var color = new CakeJS.Timeline()
       color.addKeyframe(6000, {fill: c.fill})
       color.addKeyframe(8000, {fill: [40,220,90,0.5]}, 'sine')
       c.addTimeline(color)
@@ -2837,10 +2835,10 @@ OTHER DEALINGS IN THE SOFTWARE.
     initialize : function() {
       Effect.initialize.apply(this, arguments)
       this.canvas.redrawOnlyWhenChanged = true
-      var c = new Circle(40, {fill: [40, 220, 90, 0.5]})
+      var c = new CakeJS.Circle(40, {fill: [40, 220, 90, 0.5]})
       c.x = 100
       c.y = 100
-      var r = new Rectangle(80, 80, {fill: [220, 40, 90, 0.5]})
+      var r = new CakeJS.Rectangle(80, 80, {fill: [220, 40, 90, 0.5]})
       r.x = 400
       r.y = 300
       var kb_move = function(t,dt) {
@@ -3015,7 +3013,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     margin-bottom: 4px;
   }
 </style>
-<title>CAKE - Canvas Animation Kit Experiment</title>
+<title>CAKE - CakeJS.Canvas Animation Kit Experiment</title>
 </head>
 <body vlink="#83668C" link="#A3A6FF">
   <div id="controlPanel">
