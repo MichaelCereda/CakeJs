@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+<g style="fill:none;stroke:blue">
+<g id="ggg">
+<g id="g2">
+<ellipse id="g1" cx="100" cy="100" rx="75" ry="40"/>
+<use xlink:href="#g1" transform="rotate(30 100 100)"/>
+<use xlink:href="#g1" transform="rotate(60 100 100)"/>
+</g>
+<use xlink:href="#g2" transform="rotate(90 100 100)"/>
+</g>
+</g>
+<use xlink:href="#ggg" style="fill:none;stroke:red"
+transform="translate(160,0)"/>
+<use xlink:href="#ggg" style="fill:none;stroke:orange"
+transform="translate(0,160)"/>
+<use xlink:href="#ggg" style="fill:none;stroke:green"
+transform="translate(160,160)"/>
+</svg>
